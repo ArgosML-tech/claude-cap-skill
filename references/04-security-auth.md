@@ -307,3 +307,12 @@ This matters for tests: if the test setup creates orders via POST (which creates
 - Which entities or actions need protection
 - Whether the restriction is static (role-based) or instance-based (data-dependent)
 - Whether the solution must also work correctly in draft mode (draft entities have separate access paths)
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G1 — cds.users en nivel incorrecto (@sap/cds@9)
+**Síntoma:** `requester1` recibía 403 "lacking required roles" aunque tenía roles definidos en `package.json`
+**Causa:** Los usuarios mock se definieron en `cds.users` (nivel raíz), pero en `@sap/cds@9` deben estar en `cds.requires.auth.users`
+**Fix aplicado:** Mover el bloque de usuarios a `cds.requires.auth.users` en `package.json`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

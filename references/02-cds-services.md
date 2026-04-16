@@ -149,3 +149,12 @@ When validating an action:
 3. Validate the final observable state
 
 Do not depend solely on the immediate action response containing every virtual or enriched field.
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G6 — validate-metadata.js no resuelve correctamente paths de servicios con acrónimos todo-mayúsculas
+**Síntoma:** El script transforma `BERService` → `b-e-r` en lugar de `ber` al derivar el service slug para `$metadata`
+**Causa:** El regex de conversión PascalCase-to-kebab trata cada letra de un acrónimo como una palabra separada
+**Fix aplicado:** Verificación manual de `$metadata` vía `curl`. El endpoint `/odata/v4/ber/$metadata` es correcto y retorna 200 con todas las entidades y acciones
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

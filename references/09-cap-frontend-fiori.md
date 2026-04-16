@@ -712,3 +712,30 @@ Before proposing an extension, state clearly which FE behavior is standard and w
 - Moving business rules into the UI that belong in CAP
 - Confusing static asset availability with full visual validation
 - Treating Fiori preview as proof that the FE app is fully usable
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G4 — Annotation duplicate @UI.SelectionFields entre múltiples archivos CDS
+**Síntoma:** CDS compiler error "Duplicate assignment with @UI.SelectionFields" al cargar modelo con dos archivos de annotations para la misma entidad
+**Causa:** Ambos `ber-requests.cds` y `ber-approvals.cds` anotaban `@UI.SelectionFields` en la misma entidad de servicio. El compilador CDS no permite duplicados sin qualifiers para esta annotation
+**Fix aplicado:** Mantener `@UI.SelectionFields` solo en `ber-requests.cds`. En `ber-approvals.cds` usar qualifiers: `UI.LineItem #Approvals`, `UI.Facets #Approvals`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G5 — Component.js extend() debe coincidir exactamente con sap.app.id (sin sufijo .Component)
+**Síntoma:** `validate-metadata.js` rechazaba `AppComponent.extend('com.argosml.ber.requests.Component', ...)` indicando que no coincide con `sap.app.id`
+**Causa:** El validator hace match exacto; el argumento de `extend()` debe ser el mismo string que `sap.app.id` (sin sufijo `.Component`)
+**Fix aplicado:** Cambiar a `AppComponent.extend('com.argosml.ber.requests', ...)`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G7 — standalone Fiori Elements apps no pueden cargarse desde CDN (sap.fe.core.AppRouter no disponible como módulo individual)
+**Síntoma:** Pantalla en blanco al abrir `/ber-requests/webapp/index.html`. Playwright muestra `failed to load JavaScript resource: sap/fe/core/AppRouter.js`. En el historial anterior la causa se atribuía a Basic Auth / XHR, pero la causa real era el CDN
+**Causa:** `sap/fe/core/AppRouter.js` no existe como fichero individual en ninguna versión del CDN de SAPUI5 (`ui5.sap.com` ni `sapui5.hana.ondemand.com`). Tampoco está incluido en `library-preload.js`. Adicionalmente, la URL original `1.120.x` también era un 404 (el CDN de SAP no soporta wildcards de versión). La URL `1.120.18` tampoco existe (solo 1.120.0–1.120.2 en este CDN)
+**Fix aplicado:** Crear en `server.js` dos rutas de auth-gate (`GET /ber-requests`, `GET /ber-approvals`) que: (1) emiten challenge Basic Auth con `WWW-Authenticate` propio, (2) tras credenciales válidas redirigen a `/$fiori-preview/BERService/ExpenditureRequests#preview-app`. El browser cachea credenciales para el origen; todas las llamadas OData siguientes incluyen el header automáticamente. `$fiori-preview` usa FLP sandbox + ushell y nunca carga AppRouter directamente
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

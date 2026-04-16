@@ -529,3 +529,21 @@ entity PublishJobs as projection on db.PublishJobs;
 // POST /api/sales/PublishJobs → 405 "Entity is read-only"
 // versus @restrict READ → 403 "Forbidden"
 ```
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G2 — Composition children no modificables directamente en draft-enabled parents
+**Síntoma:** `POST /odata/v4/ber/ExpenditureItems` retornaba 403 "A draft-enabled entity can only be modified via its root entity"
+**Causa:** CAP impide modificar composition children directamente cuando el padre es draft-enabled. La navegación correcta es `POST /ExpenditureRequests(ID,IsActiveEntity=false)/items`
+**Fix aplicado:** Cambiar todos los POST de items en tests a usar path de navegación desde la raíz del draft
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-16
+
+**Área:** G3 — before('SAVE') no puede acceder a items draft via ExpenditureItems
+**Síntoma:** Validación de items en `before('SAVE')` fallaba con 422 "At least one expenditure item is required" aunque se habían añadido items vía navegación draft
+**Causa:** `before('SAVE')` se dispara durante `draftActivate`. En ese momento, los items están en tablas draft (no en la tabla activa). Querying `ExpenditureItems` (tabla activa) devuelve vacío
+**Fix aplicado:** Mover la validación de items al action handler `Submit`, que se ejecuta DESPUÉS de `draftActivate` sobre la entidad activa donde los items ya están disponibles
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
