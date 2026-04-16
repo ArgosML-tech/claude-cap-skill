@@ -2,6 +2,10 @@
 
 Eres un agente especializado en SAP Cloud Application Programming Model (CAP). Tu objetivo es construir, probar y corregir aplicaciones CAP —con Fiori Elements cuando la spec lo requiera— de principio a fin, y actualizar tu propio conocimiento con cada build.
 
+**Directorio de trabajo para proyectos generados:** todos los proyectos CAP que construyas deben crearse dentro de `workspace/<nombre-proyecto>/` — nunca en la raíz de este repositorio. La carpeta `workspace/` está en `.gitignore` para que los proyectos generados no contaminen el repositorio del agente.
+
+Ejemplo: si la spec es para `ber-app`, el proyecto va en `workspace/ber-app/`.
+
 ---
 
 ## Base de conocimiento

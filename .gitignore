@@ -1,3 +1,6 @@
 node_modules/
 fe-validation-*.png
 build-log.md
+
+# Generated CAP projects — never commit apps built by the agent
+workspace/
