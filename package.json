@@ -1,0 +1,20 @@
+{
+  "name": "cap-agent-newproj",
+  "version": "1.0.0",
+  "description": "CAP agent infrastructure: validation scripts and knowledge base for building CAP apps end-to-end.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "validate:static": "node scripts/validate-metadata.js",
+    "validate:metadata": "node scripts/validate-metadata.js",
+    "validate:fe": "node scripts/validate-fe.js",
+    "learn": "node scripts/close-learning-loop.js",
+    "install:playwright": "npx playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

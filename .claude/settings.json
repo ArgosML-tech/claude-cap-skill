@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx cds *)",
+      "Bash(npx playwright *)",
+      "Bash(node scripts/*)",
+      "Bash(npm test)",
+      "Bash(npm install)",
+      "Bash(npm run *)",
+      "Bash(cds *)",
+      "Bash(node -e *)",
+      "Bash(node -v)",
+      "Bash(npm -v)"
+    ]
+  }
+}
