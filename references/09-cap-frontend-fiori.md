@@ -739,3 +739,21 @@ Before proposing an extension, state clearly which FE behavior is standard and w
 **Fix aplicado:** Crear en `server.js` dos rutas de auth-gate (`GET /ber-requests`, `GET /ber-approvals`) que: (1) emiten challenge Basic Auth con `WWW-Authenticate` propio, (2) tras credenciales válidas redirigen a `/$fiori-preview/BERService/ExpenditureRequests#preview-app`. El browser cachea credenciales para el origen; todas las llamadas OData siguientes incluyen el header automáticamente. `$fiori-preview` usa FLP sandbox + ushell y nunca carga AppRouter directamente
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Validación FE] `validate-fe.js` selector de filas detecta falso positivo en estado vacío
+**Síntoma:** "Row click did not navigate to ObjectPage" — FAIL — cuando la lista está vacía (sin datos de prueba).
+**Causa:** El selector `[role="row"]:not([aria-rowindex="1"])` hace match con la fila del estado vacío ("No se han encontrado resultados"), que tiene `role="row"`. El script cuenta `rowCount > 0` y trata de hacer click, pero la fila de estado vacío no navega.
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Validación FE] `validate-metadata.js` deriva path incorrecto para servicios con `@path` custom
+**Síntoma:** Pass 2 del script falla al resolver `$metadata` — intenta `/odata/v4/urgent-procurement/` en lugar de `/odata/v4/UrgentProcurementService/`.
+**Causa:** El script convierte el nombre del servicio a kebab-case (`UrgentProcurementService` → `urgent-procurement`), pero cuando el servicio tiene `@path: 'UrgentProcurementService'` el path real conserva el nombre original.
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

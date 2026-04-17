@@ -316,3 +316,12 @@ This matters for tests: if the test setup creates orders via POST (which creates
 **Fix aplicado:** Mover el bloque de usuarios a `cds.requires.auth.users` en `package.json`
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Auth] Usuarios mocked deben estar en `cds.requires.auth.users`, no en `cds.auth.users`
+**Síntoma:** 403 Forbidden en todas las acciones con `@requires`, aunque los usuarios están definidos en `package.json` con los roles correctos. `cds.env.requires.auth.users` mostraba roles por defecto de CDS (alice=admin, bob=cds.ExtensionDeveloper) en lugar de los del proyecto.
+**Causa:** En CDS v9, los usuarios mocked deben configurarse bajo `cds.requires.auth.users` (dentro del bloque `requires`). La ubicación `cds.auth.users` (fuera de `requires`) es ignorada — CDS v9 usa los usuarios built-in por defecto.
+**Fix aplicado:** Mover la configuración completa de `auth` (con `kind`, `users`) de `cds.auth` a `cds.requires.auth` en `.cdsrc.json`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

@@ -219,8 +219,10 @@ try {
 
 // ── Check 4: Row click navigates to ObjectPage ────────────────────────────────
 
-// Only if there are data rows
-const dataRows = page.locator('tr.sapMLIB, .sapMListItem, [role="row"]:not([aria-rowindex="1"])')
+// Only if there are actual data rows.
+// FE List Report empty state renders as tr.sapMListNoData (not sapMLIB), so
+// selecting tr.sapMLIB safely excludes the empty-state placeholder.
+const dataRows = page.locator('tr.sapMLIB, .sapMListItem').filter({ hasNot: page.locator('.sapMListNoData') })
 
 let rowCount = 0
 try {

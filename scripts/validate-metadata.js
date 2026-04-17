@@ -236,12 +236,14 @@ if (port) {
 
   // Derive service path: try common conventions
   // CatalogService → /odata/v4/catalog/ or /catalog/
+  // Also try the original service name in case @path is set explicitly (e.g. @path: 'UrgentProcurementService')
   const serviceSlug = serviceName
     .replace(/Service$/, '')
     .replace(/([A-Z])/g, (_, c, i) => (i > 0 ? '-' : '') + c.toLowerCase())
 
   const candidatePaths = [
-    `/odata/v4/${serviceSlug}/`,
+    `/odata/v4/${serviceName}/`,           // exact name as declared in @path (most reliable)
+    `/odata/v4/${serviceSlug}/`,           // kebab-case without "Service" suffix
     `/odata/v4/${serviceSlug.toLowerCase()}/`,
     `/${serviceSlug}/`,
   ]

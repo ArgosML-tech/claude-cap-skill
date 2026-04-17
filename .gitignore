@@ -5,3 +5,4 @@ build-log.md
 # Generated CAP projects — never commit apps built by the agent
 workspace/
 ber-app/
+cap-mil/

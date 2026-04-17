@@ -44,3 +44,45 @@ No borrar entre sesiones.
 - **Reference actualizada:** `09-cap-frontend-fiori.md`
 - **Reusable:** sí — registrado desde build-log automático
 
+
+## Iteration 2026-04-17
+- **Hallazgo:** CDS compiler error: `'case' is a reserved word - write '![case]' instead` en todas las entidades hijo (CaseApprovals, CaseAttachments, CaseComments, CaseEventLogs).
+- **Fix:** Renombrar `case` → `caseRef` en todas las entidades hijo y en todas las cláusulas `on` de las Compositions. Actualizar `case_ID` → `caseRef_ID` en el handler JS.
+- **Reference actualizada:** `11-cds-modeling-guardrails.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** Códigos de estado como `PENDING_UNIT_APPROVAL` (21 chars) exceden el límite de 11 chars de `sap.common.CodeList`.
+- **Fix:** Definir aspecto personalizado `CatalogBase { key code: String(40); name: String(150); }` en lugar de extender `CodeList`. Eliminar import de `sap.common.CodeList`.
+- **Reference actualizada:** `11-cds-modeling-guardrails.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** `status: Association to CaseStatuses default 'DRAFT'` falla — CDS no soporta default directo en Associations sin FK explícita.
+- **Fix:** Eliminar `default 'DRAFT'` de la Association; establecer el estado inicial en el handler `before CREATE` vía `req.data.status_code ??= 'DRAFT'`.
+- **Reference actualizada:** `11-cds-modeling-guardrails.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** `Cannot read properties of undefined (reading 'transitions')` al hacer deploy de CSVs con `@sap/cds 8.9.9` + `@cap-js/sqlite 2.2.0`.
+- **Fix:** Actualizar `package.json` de `"@sap/cds": "^8"` a `"@sap/cds": "^9"` y `"@sap/cds-dk": "^8"` a `"@sap/cds-dk": "^9"`. Ejecutar `npm install`.
+- **Reference actualizada:** `05-testing-deployment.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** `Cannot find module '@cap-js/cds-test'` al ejecutar `npm test` con CDS v9.
+- **Fix:** `npm install @cap-js/cds-test --save-dev`.
+- **Reference actualizada:** `05-testing-deployment.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** 403 Forbidden en todas las acciones con `@requires`, aunque los usuarios están definidos en `package.json` con los roles correctos. `cds.env.requires.auth.users` mostraba roles por defecto de CDS (alice=admin, bob=cds.ExtensionDeveloper) en lugar de los del proyecto.
+- **Fix:** Mover la configuración completa de `auth` (con `kind`, `users`) de `cds.auth` a `cds.requires.auth` en `.cdsrc.json`.
+- **Reference actualizada:** `04-security-auth.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** "Row click did not navigate to ObjectPage" — FAIL — cuando la lista está vacía (sin datos de prueba).
+- **Fix:** (see build-log for details)
+- **Reference actualizada:** `09-cap-frontend-fiori.md`
+- **Reusable:** sí — registrado desde build-log automático
+
+- **Hallazgo:** Pass 2 del script falla al resolver `$metadata` — intenta `/odata/v4/urgent-procurement/` en lugar de `/odata/v4/UrgentProcurementService/`.
+- **Fix:** (see build-log for details)
+- **Reference actualizada:** `09-cap-frontend-fiori.md`
+- **Reusable:** sí — registrado desde build-log automático
+

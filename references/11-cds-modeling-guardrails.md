@@ -181,3 +181,30 @@ This works because `*` (implied by `excluding`) expands after the implicit FKs a
 - Prefer associations for master data and external references
 - Use aspects to reduce duplication
 - Let compiler messages steer you back to the model before touching handlers
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Modelado CDS] `case` es palabra reservada en CDS
+**Síntoma:** CDS compiler error: `'case' is a reserved word - write '![case]' instead` en todas las entidades hijo (CaseApprovals, CaseAttachments, CaseComments, CaseEventLogs).
+**Causa:** El campo de back-reference a la entidad padre se llamaba `case` — coincide con la keyword de JS/CDS.
+**Fix aplicado:** Renombrar `case` → `caseRef` en todas las entidades hijo y en todas las cláusulas `on` de las Compositions. Actualizar `case_ID` → `caseRef_ID` en el handler JS.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Modelado CDS] `sap.common.CodeList` tiene clave String(11) — incompatible con códigos largos
+**Síntoma:** Códigos de estado como `PENDING_UNIT_APPROVAL` (21 chars) exceden el límite de 11 chars de `sap.common.CodeList`.
+**Causa:** La definición de `CodeList` en `@sap/cds/common` usa `key code: String(11)`.
+**Fix aplicado:** Definir aspecto personalizado `CatalogBase { key code: String(40); name: String(150); }` en lugar de extender `CodeList`. Eliminar import de `sap.common.CodeList`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Modelado CDS] `default` en Association es ilegal
+**Síntoma:** `status: Association to CaseStatuses default 'DRAFT'` falla — CDS no soporta default directo en Associations sin FK explícita.
+**Causa:** Las Associations en CDS no admiten `default` en la forma abreviada.
+**Fix aplicado:** Eliminar `default 'DRAFT'` de la Association; establecer el estado inicial en el handler `before CREATE` vía `req.data.status_code ??= 'DRAFT'`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

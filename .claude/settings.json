@@ -34,7 +34,23 @@
       "Bash(curl -s -u l1approver1: 'http://localhost:4004/odata/v4/ber/$metadata')",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:4004/)",
       "Bash(curl -s -u \"l1approver1:\" \"http://localhost:4004/odata/v4/ber/ExpenditureRequests\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(npx @sap/cds-dk --version)",
+      "Bash(npm view *)",
+      "Bash(python3 -c \"import sys,json; v=json.load\\(sys.stdin\\); print\\(v[-5:]\\)\")",
+      "Read(//c/Users/diazr/**)",
+      "Bash(node c:/Users/diazr/workspace/cap-agent/newproj-cap/scripts/validate-metadata.js --project-dir c:/Users/diazr/workspace/cap-agent/newproj-cap/cap-mil --service UrgentProcurementService --entities Cases)",
+      "Bash(taskkill /F /PID 30160)",
+      "Bash(curl -s -H 'Authorization: Basic __CMDSUB_OUTPUT__')",
+      "Bash(ls c:/Users/diazr/workspace/cap-agent/newproj-cap/cap-mil/fe-validation-*.png)",
+      "Bash(node c:/Users/diazr/workspace/cap-agent/newproj-cap/scripts/close-learning-loop.js --build-log c:/Users/diazr/workspace/cap-agent/newproj-cap/cap-mil/build-log.md --evolution-log c:/Users/diazr/workspace/cap-agent/newproj-cap/agent-evolution.md --references-dir c:/Users/diazr/workspace/cap-agent/newproj-cap/references/)",
+      "Bash(node c:/Users/diazr/workspace/cap-agent/newproj-cap/scripts/validate-metadata.js --project-dir . --service UrgentProcurementService --entities Cases --port 4099)",
+      "Bash(node c:/Users/diazr/workspace/cap-agent/newproj-cap/scripts/validate-fe.js --port 4099 --service UrgentProcurementService --entity Cases --credentials admin:admin --screenshot)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\diazr\\workspace\\cap-agent\\newproj-cap\\cap-mil"
     ]
   }
 }

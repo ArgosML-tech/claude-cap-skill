@@ -360,3 +360,21 @@ When multitenancy is confirmed:
 - Review production configuration and managed services
 - Clearly separate domain logic, platform configuration, and tenant lifecycle
 - Avoid proposals that only work in single-tenant mode if the requirement is multi-tenant
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [Compatibilidad] `@cap-js/sqlite@^2` requiere `@sap/cds >= 9.8`
+**Síntoma:** `Cannot read properties of undefined (reading 'transitions')` al hacer deploy de CSVs con `@sap/cds 8.9.9` + `@cap-js/sqlite 2.2.0`.
+**Causa:** `@cap-js/db-service 2.9.0` (depende de `@cap-js/sqlite@^2`) usa `this.srv.resolve.transitions()` que solo existe en CDS v9 (`@sap/cds/lib/ql/resolve.js`). Los peer deps lo declaran explícitamente: `"@sap/cds": ">=9.8"`.
+**Fix aplicado:** Actualizar `package.json` de `"@sap/cds": "^8"` a `"@sap/cds": "^9"` y `"@sap/cds-dk": "^8"` a `"@sap/cds-dk": "^9"`. Ejecutar `npm install`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-17
+
+**Área:** [CDS v9] `cds.test()` requiere `@cap-js/cds-test` como dependencia explícita
+**Síntoma:** `Cannot find module '@cap-js/cds-test'` al ejecutar `npm test` con CDS v9.
+**Causa:** En CDS v9, el módulo de test se extrae a `@cap-js/cds-test` como paquete separado (no incluido en `@sap/cds`).
+**Fix aplicado:** `npm install @cap-js/cds-test --save-dev`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
