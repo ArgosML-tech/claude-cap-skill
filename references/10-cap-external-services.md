@@ -153,3 +153,21 @@ When the user wants the real S/4 flow, add explicitly:
 - Do not store duplicated remote descriptive fields locally unless the requirement calls for caching
 - Do not assume `READ` against a projected local entity forwards unchanged to the external service — check the target names in the query first
 - Do not ask the user to paste service keys, OAuth tokens, or client secrets into the chat
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Integración de servicios externos (mock in-process)
+**Síntoma:** `No credentials configured for "API_BUSINESS_PARTNER"` al ejecutar `cds.test()` — los tests no arrancaban.
+**Causa:** `cds.test()` no activa `--with-mocks` automáticamente. Los servicios `kind: "odata-v2"` sin credenciales fallan al inicializar el `RemoteService`.
+**Fix aplicado:** Crear archivos `srv/external/*.js` con `impl` explícito que extienden `cds.Service` y sirven datos desde un array en memoria. Añadir `"impl"` a la config de `cds.requires`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Data Mashup — query re-targeting
+**Síntoma:** `SqliteError: no such table: WarrantyService_ExtendedBusinessPartners` en el handler de mashup.
+**Causa:** El handler delegaba `req.query` directamente al servicio externo, pero la query tenía como FROM el nombre de la projection view de servicio (`WarrantyService_ExtendedBusinessPartners`), no la entidad real (`API_BUSINESS_PARTNER.A_BusinessPartner`).
+**Fix aplicado:** Re-construir la query con `SELECT.from('API_BUSINESS_PARTNER.A_BusinessPartner', [...columns])` antes de pasarla al servicio externo.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

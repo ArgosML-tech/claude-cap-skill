@@ -19,6 +19,7 @@
  *     --port 4004 \
  *     --service CatalogService \
  *     --entity Products \
+ *     [--app-url /my-app/webapp/index.html#my-app-id]  optional: override target URL
  *     [--screenshot] \
  *     [--timeout 30000] \
  *     [--credentials user:pass]
@@ -57,6 +58,7 @@ function hasFlag(name) {
 const port = Number(getArg('--port') ?? '4004')
 const serviceName = getArg('--service')
 const entityName = getArg('--entity')
+const appUrlOverride = getArg('--app-url')    // optional: test standalone URL instead of $fiori-preview
 const takeScreenshot = hasFlag('--screenshot')
 const timeout = Number(getArg('--timeout') ?? '30000')
 const credentials = getArg('--credentials') ?? 'admin:'   // default: mocked auth
@@ -87,9 +89,12 @@ function warn(check, detail = '') {
 
 // ── Build URL ─────────────────────────────────────────────────────────────────
 
-// Always use $fiori-preview — not standalone index.html
-// See references/09-cap-frontend-fiori.md "Local validation checklist"
-const previewUrl = `http://localhost:${port}/$fiori-preview/${serviceName}/${entityName}#preview-app`
+// By default use $fiori-preview (works without Component.js, verifies metadata annotations).
+// When --app-url is supplied, test the standalone app instead — required to verify
+// manifest.json settings like creationMode that $fiori-preview ignores.
+const previewUrl = appUrlOverride
+  ? `http://localhost:${port}${appUrlOverride}`
+  : `http://localhost:${port}/$fiori-preview/${serviceName}/${entityName}#preview-app`
 
 console.log(`\n── Playwright FE Validation ──────────────────────────────────────`)
 console.log(`  URL:     ${previewUrl}`)
@@ -217,6 +222,41 @@ try {
   )
 }
 
+// ── Check 3b: Create button visible in List Report toolbar ───────────────────
+
+// The Create button is rendered as a sap.m.Button with text matching common
+// labels (Create / Crear / Neu / Créer). @UI.CreateHidden: false is required
+// for non-draft entities; without it FE hides the button silently.
+const createBtn = page.locator(
+  'button.sapMBtn',
+  { hasText: /^(Create|Crear|Neu|Créer|New)$/i }
+).first()
+
+try {
+  const visible = await createBtn.isVisible({ timeout: 3000 })
+  if (visible) {
+    pass('Create button visible in List Report toolbar')
+  } else {
+    fail(
+      'Create button NOT visible in List Report toolbar',
+      'Add @UI.CreateHidden: false to the entity annotations — FE hides Create by default for non-draft entities'
+    )
+  }
+} catch {
+  fail(
+    'Create button NOT visible in List Report toolbar',
+    'Add @UI.CreateHidden: false to the entity annotations — FE hides Create by default for non-draft entities'
+  )
+}
+
+// ── Screenshot (List Report state, before row click) ─────────────────────────
+
+if (takeScreenshot) {
+  const screenshotPath = `fe-validation-${serviceName}-${entityName}-list-${Date.now()}.png`
+  await page.screenshot({ path: screenshotPath, fullPage: false })
+  console.log(`\n  Screenshot (List Report): ${screenshotPath}`)
+}
+
 // ── Check 4: Row click navigates to ObjectPage ────────────────────────────────
 
 // Only if there are actual data rows.
@@ -261,12 +301,12 @@ if (rowCount === 0) {
   }
 }
 
-// ── Screenshot ────────────────────────────────────────────────────────────────
+// ── Screenshot (ObjectPage state, after row click) ───────────────────────────
 
 if (takeScreenshot) {
-  const screenshotPath = `fe-validation-${serviceName}-${entityName}-${Date.now()}.png`
+  const screenshotPath = `fe-validation-${serviceName}-${entityName}-objectpage-${Date.now()}.png`
   await page.screenshot({ path: screenshotPath, fullPage: false })
-  console.log(`\n  Screenshot saved: ${screenshotPath}`)
+  console.log(`  Screenshot (ObjectPage): ${screenshotPath}`)
 }
 
 // ── Console errors summary ────────────────────────────────────────────────────

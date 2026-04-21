@@ -40,6 +40,9 @@ Para cada entidad identificada en la spec, extraer:
 - Si es draft-enabled (¿el usuario crea y edita registros de forma incremental antes de confirmar?)
 - Si es un code list (@cds.autoexpose @readonly — valores fijos de catálogo)
 
+> **Regla crítica — planificar el árbol draft en el intake, no al final:**
+> Si cualquier entidad necesita Create/Edit en la UI Fiori, hay que decidir en esta fase qué entidad es la **raíz draft** de cada árbol de composición. CAP solo permite `@odata.draft.enabled` en la raíz; las hijas heredan el draft automáticamente y NO pueden tener la anotación ellas mismas. Añadir draft tarde (fase 7) obliga a rediseñar el modelo de servicio y puede romper tests de integración existentes (PATCH directo sobre active entity queda bloqueado). Salida temprana: si la spec dice "el usuario crea X", marcar X (o su raíz de composición) como draft-enabled aquí.
+
 **Ordenar las entidades por dependencia:**
 1. Code lists primero (no dependen de nada)
 2. Entidades maestras (RiskProfiles, etc.)

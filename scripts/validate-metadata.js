@@ -39,6 +39,7 @@ function hasFlag(name) {
 const projectDir = getArg('--project-dir') ?? '.'
 const serviceName = getArg('--service')
 const rawEntities = getArg('--entities') ?? ''
+const credentials = getArg('--credentials') ?? null   // optional: user:pass for mocked auth
 const port = getArg('--port') ? Number(getArg('--port')) : null
 const checkDraft = hasFlag('--draft')
 
@@ -163,12 +164,15 @@ for (const dir of appDirs) {
     }
   }
 
-  // routerClass
+  // routerClass — optional since UI5 1.120: AppComponent sets it implicitly.
+  // Specifying "sap.fe.core.AppRouter" explicitly is still valid for older CDN versions,
+  // but in 1.120+ AppRouter.js no longer ships as a standalone file so the explicit
+  // reference causes a 404 when loading locally. Both absent and present are acceptable.
   const routerClass = manifest['sap.ui5']?.routing?.config?.routerClass
-  if (routerClass !== 'sap.fe.core.AppRouter') {
-    fail(`${appLabel}: routerClass should be "sap.fe.core.AppRouter", found "${routerClass ?? 'undefined'}"`)
+  if (routerClass && routerClass !== 'sap.fe.core.AppRouter') {
+    fail(`${appLabel}: routerClass "${routerClass}" is not sap.fe.core.AppRouter`)
   } else {
-    pass(`${appLabel}: routerClass = sap.fe.core.AppRouter`)
+    pass(`${appLabel}: routerClass ok (${routerClass ? routerClass : 'implicit via AppComponent'})`)
   }
 
   // sap.fe.templates in deps
@@ -254,7 +258,10 @@ if (port) {
   for (const path of candidatePaths) {
     const url = `http://localhost:${port}${path}$metadata`
     try {
-      const resp = await fetch(url)
+      const fetchOpts = credentials
+        ? { headers: { Authorization: `Basic ${Buffer.from(credentials).toString('base64')}` } }
+        : {}
+      const resp = await fetch(url, fetchOpts)
       if (resp.ok) {
         metadataXml = await resp.text()
         usedPath = path

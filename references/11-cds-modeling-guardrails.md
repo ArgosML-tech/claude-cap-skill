@@ -208,3 +208,21 @@ This works because `*` (implied by `excluding`) expands after the implicit FKs a
 **Fix aplicado:** Eliminar `default 'DRAFT'` de la Association; establecer el estado inicial en el handler `before CREATE` vía `req.data.status_code ??= 'DRAFT'`.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Schema / Tipos CDS
+**Síntoma:** Error de compilación `Mismatched 'enum'` al usar `@assert.range enum { }` inline en un campo
+**Causa:** CAP CDS no soporta la sintaxis `field : Type @assert.range enum { ... }` inline. Las enumeraciones deben definirse como tipos explícitos separados.
+**Fix aplicado:** Definir `type ContractStatus : String(20) enum { ... }` y usar el tipo en el campo.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Fase 7 — UI] @assert.range enum en annotate bloque compilation
+**Síntoma:** `cds build` fallaba con `Mismatched 'enum'` en `app/template-admin.cds`.
+**Causa:** La sintaxis `@assert.range enum { Word; HTML; }` en bloque `annotate` es inválida. Los enum types en CDS se declaran en el modelo (`db/`), no en anotaciones inline.
+**Fix aplicado:** Eliminar `@assert.range` — la validación de valores del motor se delega al handler si fuera necesaria.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

@@ -325,3 +325,21 @@ This matters for tests: if the test setup creates orders via POST (which creates
 **Fix aplicado:** Mover la configuración completa de `auth` (con `kind`, `users`) de `cds.auth` a `cds.requires.auth` en `.cdsrc.json`.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-18
+
+**Área:** G2 — Usuarios mocked deben estar en `cds.requires.auth.users`, no en `cds.users`
+**Síntoma:** `supervisor1` y `compliance1` reciben 403 al llamar acciones con `@requires: 'Supervisor'` / `@requires: 'Compliance'`
+**Causa:** En CAP 9, el auth mocked busca usuarios en `cds.requires.auth.users`. La key `cds.users` no es leída por el middleware de auth
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-18
+
+**Área:** G4 — `validate-metadata.js` Pass 2 necesita `--credentials` cuando el servicio requiere auth
+**Síntoma:** Pass 2 falla aunque el servidor está corriendo — recibe 401
+**Causa:** El servicio tiene `@requires: 'authenticated-user'`, por lo que `$metadata` devuelve 401 sin credenciales
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

@@ -155,3 +155,21 @@ package.json          ← @sap/cds dependency, cds config section
 | Anotaciones de acción | `@Core.OperationAvailable` con virtual Boolean field |
 | Title del Object Page | Campo más descriptivo para el humano (no el UUID) |
 | Una app por rol vs compartida | Una app por cluster de rol si los datos son distintos |
+
+## Gap descubierto — 2026-04-18
+
+**Área:** G3 — `db.entities()` deprecated en CAP 9
+**Síntoma:** Warning en consola: `DEPRECATED: srv.entities() — use cds.entities() instead`
+**Causa:** La API `db.entities('namespace')` fue deprecada en CAP 9
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Fase 4 — Auth] cds.users ubicación incorrecta en package.json
+**Síntoma:** Usuario `admin` se autenticaba pero sin roles — `User 'admin' is lacking required roles: [TemplateAdmin,DocumentConsumer]`
+**Causa:** En CAP 9.x, el bloque `cds.users` en `package.json` a nivel raíz no es leído por el middleware de mocked auth. Los usuarios deben estar bajo `cds.requires.auth.users`.
+**Fix aplicado:** Mover `"users": {...}` dentro de `"cds": { "requires": { "auth": { "kind": "mocked", "users": {...} } } }`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

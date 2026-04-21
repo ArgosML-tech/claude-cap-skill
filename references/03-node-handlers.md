@@ -547,3 +547,21 @@ entity PublishJobs as projection on db.PublishJobs;
 **Fix aplicado:** Mover la validación de items al action handler `Submit`, que se ejecuta DESPUÉS de `draftActivate` sobre la entidad activa donde los items ya están disponibles
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-19
+
+**Área:** G6 — SELECT.one + count(*) devuelve objeto, no array
+**Síntoma:** 500 "TypeError: (intermediate value) is not iterable" en `getScenarioDashboard`
+**Causa:** `SELECT.one` devuelve un objeto único, no un array. La destructuración `const [{ count }] = await db.run(SELECT.one...)` falla porque un objeto no es iterable.
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Handler Node.js] LargeBinary se excluye de SELECT * y se devuelve como Readable stream
+**Síntoma:** `!staging.fileContent` era `true` aunque el campo tenía datos en la BD; `length` undefined.
+**Causa:** En `@cap-js/sqlite` 9.x, los campos `LargeBinary` (especialmente con `@Core.MediaType`) se excluyen de los SELECT estrella. Cuando se los pide explícitamente con `.columns(...)`, se devuelven como `Readable` stream de Node.js, no como `Buffer`.
+**Fix aplicado:** (1) Usar `SELECT.one.from(...).columns('ID','fileContent',...)` explícito. (2) Convertir el stream a Buffer con `for await (const chunk of stream)` antes de pasarlo a `xlsx.read()`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

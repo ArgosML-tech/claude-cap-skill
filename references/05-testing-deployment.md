@@ -378,3 +378,111 @@ When multitenancy is confirmed:
 **Fix aplicado:** `npm install @cap-js/cds-test --save-dev`.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-18
+
+**Área:** [validate-metadata.js 2026-04-18] No enviaba credenciales en Pass 2
+**Síntoma:** Pass 2 falla con "not reachable" aunque el servidor estaba activo. CAP devuelve 403 (no 401) sin credentials.
+**Causa:** El script `validate-metadata.js` no tenía soporte para `--credentials` en el fetch HTTP.
+**Fix aplicado:** Añadir parámetro `--credentials user:pass` al script que se incluye como `Authorization: Basic ...` en el fetch.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-18
+
+**Área:** G1 — SQLite no deployado antes de ejecutar tests
+**Síntoma:** `no such table: DRAFT_DraftAdministrativeData` al ejecutar tests por primera vez
+**Causa:** `cds.test()` conecta al `db.sqlite` configurado en `.cdsrc.json` pero las tablas no existen hasta ejecutar `cds deploy`
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-19
+
+**Área:** G1 — URLs de tests incorrectas (CAP @path con prefijo api/)
+**Síntoma:** todos los tests fallaban con 404 en las primeras ejecuciones
+**Causa:** el servicio tiene `@path: 'api/admin'` → CAP lo sirve en `/odata/v4/api/admin`, no en `/odata/v4/admin`. Los tests usaban `/api/admin/` (sin `odata/v4`).
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Tests — runner node:test con glob
+**Síntoma:** `node --test test/` fallaba con "Cannot find module".
+**Causa:** `node --test` con una carpeta como argumento intenta importar la carpeta como módulo. Necesita un glob pattern.
+**Fix aplicado:** Cambiar a `node --test "test/*.test.js"`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Tests — fechas hardcoded
+**Síntoma:** Test `activateContract transiciona contrato activo de Open a Active` fallaba con "No se puede activar un contrato ya vencido".
+**Causa:** El payload de tests usaba `endDate: '2026-01-01'` que a fecha 2026-04-20 ya está en el pasado.
+**Fix aplicado:** Actualizar fechas de test a `startDate: '2026-05-01'`, `endDate: '2028-05-01'`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Playwright — tests de mocked auth con $fiori-preview
+**Síntoma:** `document.body.innerText.length === 2` en los tests de Fiori preview; pantalla aparentemente vacía.
+**Causa:** SAPUI5 carga async desde CDN y renderiza después de que el check se ejecuta. `waitForSelector('.sapUiBody')` se satisface inmediatamente (la clase está en `<body>`) pero el contenido UI no ha renderizado.
+**Fix aplicado:** Cambiar a `waitForLoadState('domcontentloaded')` y verificar `outerHTML.length > 100` en lugar de `innerText`. Los tests visuales completos requieren más tiempo de espera o acceso a CDN.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-20
+
+**Área:** Playwright — timing al arrancar servidor
+**Síntoma:** Test fallaba en primer intento con `ERR_CONNECTION_REFUSED`; pasaba en retry.
+**Causa:** El servidor no estaba completamente listo cuando Playwright lanzó el primer test.
+**Fix aplicado:** `retries: 1` en `playwright.config.js`. Para producción: configurar `webServer` en el config para que Playwright espere el server.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Tests] `cds.test()` requiere `@cap-js/cds-test` instalado
+**Síntoma:** `Cannot resolve module '@cap-js/cds-test'` al ejecutar `jest`.
+**Causa:** En CAP 9.x, `cds.test()` delega internamente a `@cap-js/cds-test` que debe instalarse explícitamente como `devDependency`.
+**Fix aplicado:** `npm install --save-dev @cap-js/cds-test`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Tests] Jest ve conflicto de nombres con la carpeta `gen/`
+**Síntoma:** `jest-haste-map: Haste module naming collision: bulk-uploader` entre `gen/srv/package.json` y `package.json`.
+**Causa:** `npx cds build` genera `gen/` con su propio `package.json` del mismo nombre; Jest escanea la carpeta por defecto.
+**Fix aplicado:** Añadir `"testPathIgnorePatterns": ["/gen/"], "modulePathIgnorePatterns": ["/gen/"]` a la config de Jest en `package.json`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Fase 6 — Tests] CSV seed con templateID colisiona con INSERT del beforeAll
+**Síntoma:** Happy-path retornaba 400 "Template 'PRUEBA_01' has no file uploaded" aunque el `beforeAll` insertaba el registro con el buffer.
+**Causa:** El CSV seed tenía un registro `PRUEBA_01` sin `templateFile`. El `SELECT.one.where({ templateID })` devolvía ese registro (del seed) en lugar del insertado en `beforeAll`, porque `cuid` genera IDs distintos y el seed se carga primero.
+**Fix aplicado:** Vaciar el CSV seed (solo cabecera) para que los tests gestionen sus propios datos. Para el seed de desarrollo usar un `templateID` distinto (`DEMO_01`).
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Fase 6 — Tests] cds.test / axios lanza AxiosError para 4xx
+**Síntoma:** Tests de error-path fallaban con `AxiosError: 400 / 404` en lugar de capturar el status code.
+**Causa:** La capa HTTP de `cds.test` usa axios bajo el capó. Axios lanza `AxiosError` para respuestas 4xx/5xx por defecto, en lugar de resolver con el objeto response.
+**Fix aplicado:** Añadir `validateStatus: () => true` a todas las llamadas que esperan respuestas de error. Encapsulado en helper `noThrow`.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Validación FE Paso 2] validate-metadata.js necesita --credentials para servicios autenticados
+**Síntoma:** `$metadata not reachable on port 4005` aunque el servidor estaba corriendo.
+**Causa:** El servicio tiene `@requires` — requests sin auth devuelven 401. El script `validate-metadata.js` usa `--credentials user:pass` para pasar Basic Auth.
+**Fix aplicado:** Pasar `--credentials "admin:"` al script de validación.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

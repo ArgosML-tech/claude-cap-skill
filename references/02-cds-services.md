@@ -158,3 +158,39 @@ Do not depend solely on the immediate action response containing every virtual o
 **Fix aplicado:** Verificación manual de `$metadata` vía `curl`. El endpoint `/odata/v4/ber/$metadata` es correcto y retorna 200 con todas las entidades y acciones
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-19
+
+**Área:** G2 — redirection target requerido con dos proyecciones sobre la misma entidad
+**Síntoma:** CDS compilation error "can't auto-redirect" al tener `ExtractionScenarios` y `ScenarioActions` como dos proyecciones sobre `db.ExtractionScenario` en el mismo servicio
+**Causa:** CAP no puede resolver automáticamente el destino de redirections de asociaciones cuando hay dos proyecciones sobre la misma entidad base en el mismo servicio
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-19
+
+**Área:** G3 — return types de acciones bound deben referenciar proyecciones del servicio
+**Síntoma:** CDS error "No artifact has been found with name ExtractionRun" en `returns ExtractionRun`
+**Causa:** las acciones bound deben referenciar las entidades como se llaman dentro del servicio (proyecciones), no el nombre del dominio (`ExtractionRun` no existe en el servicio; existe `ExtractionRuns`)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-19
+
+**Área:** G4 — S4Mock entities con @cds.persistence.exists no se despliegan en SQLite
+**Síntoma:** `totalExtracted = 0` en todos los tests de runExtraction. Los registros de S4Mock no se cargaban aunque los CSVs existían.
+**Causa:** las entidades en `srv/external/s4-mock.cds` tenían `@cds.persistence.exists` — esta anotación indica a CAP que la entidad existe en un DB externo, NO la despliega en SQLite, y NO carga los CSVs de `srv/external/data/`
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-21
+
+**Área:** [Servicio CDS] Sintaxis incorrecta para bound action en proyección
+**Síntoma:** CDS compiler: `Element "action" has not been found in entity:UploadService.DataStaging/column:processUpload`
+**Causa:** La sintaxis `entity E as projection on db.E { action foo() ... }` no es válida. Las acciones bound no van dentro del cuerpo de columnas.
+**Fix aplicado:** Usar el bloque `actions { }` separado: `entity E as projection on db.E actions { action foo() returns String; };`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
