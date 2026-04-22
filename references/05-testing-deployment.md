@@ -82,11 +82,16 @@ const res = await app.get('/odata/v4/AdminService/Books', {
   auth: { username: 'alice', password: '' }
 })
 
-// Using app.as() when available in the cds.test flavor
-const res = await app
-  .as({ id: 'alice', roles: ['Admin'] })
-  .get('/odata/v4/AdminService/Books')
+// Using app.as() — NOT available in @cap-js/cds-test@0.4.x
+// DO NOT USE: .as({ id: 'alice', roles: ['Admin'] })  ← throws TypeError
+
+// CORRECT for @cap-js/cds-test@0.4.x — set once for the entire suite:
+const app = cds.test(__dirname + '/..');
+app.axios.defaults.auth = { username: 'admin', password: '' };
+const { GET, POST, expect } = app;
 ```
+
+**`@cap-js/cds-test@0.4.x` auth API:** `app.as()` does not exist. The only way to authenticate is `app.axios.defaults.auth = { username, password }` set once before the tests. If you get 401 errors on all tests after adding `@requires: 'authenticated-user'`, this is the fix.
 
 Inspect the project's mocked users config (in `package.json` or `.cdsrc.json`) to confirm which usernames and roles exist before inventing test identities.
 
@@ -168,6 +173,24 @@ const expectError = async (promise, expectedStatus) => {
 await expectError(app.get('/api/sales/SalesOrderDrafts'), 401)
 await expectError(app.get('/api/sales/SalesOrderDrafts', { auth: { username: 'compliance1', password: '' } }), 403)
 ```
+
+**Inline alternative to try/catch for single error assertions:**
+
+When a test has only one expected error, the promise-flattening pattern avoids a separate helper:
+
+```js
+// Inline — reads well when the error is the only thing being tested
+const err = await POST('/odata/v4/MyService/submit', { id: 'bad-id' })
+  .then(() => null, (e) => e);
+expect(err).to.exist;
+expect(err.message).to.match(/not found/i);
+
+// Or for strict status code checking:
+const err = await POST(url, body).then(() => null, (e) => e);
+expect(err?.response?.status ?? err?.status).to.equal(409);
+```
+
+Use `try/catch` when testing multiple error scenarios or building a shared helper; use the inline form for one-off error assertions that don't warrant abstraction.
 
 ### Testing with mocked external services — use `--with-mocks`
 

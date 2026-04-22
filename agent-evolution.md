@@ -285,3 +285,16 @@ No borrar entre sesiones.
 - **Reference actualizada:** `09-cap-frontend-fiori.md`
 - **Reusable:** sí — registrado desde build-log automático
 
+
+## 2026-04-22 — cap-acc end-to-end test suite: 15/15 green
+
+**Proyecto:** cap-acc (generator + starter toolkit)
+
+**Gaps corregidos en esta sesión:**
+1. **Handler naming (draft-entity):** `index.ts` generaba `srv/${entity}-handler.js`. CAP auto-descubre handlers buscando un archivo con el mismo nombre que el `.cds` del servicio. Fix: `srv/${entity}-service.js`. → `references/03-node-handlers.md`
+2. **`before(['CREATE','UPDATE'])` no funciona en draft entities (CAP 9.x):** En entidades con `@odata.draft.enabled`, la validación debe estar en `before('SAVE', Entity, ...)` que dispara en `draftActivate`. Fix: cambiar handler template y tests para validar vía draftActivate. → `references/03-node-handlers.md`
+3. **`IsActiveEntity` no puede usarse en WHERE clause:** Es un elemento virtual calculado en runtime — no existe en la DB. Usar solo `where({ ID: id })`. → `references/03-node-handlers.md`
+4. **`@cap-js/cds-test@0.4.x` no tiene `.as()`:** El auth se configura via `app.axios.defaults.auth = { username, password }`. → `references/05-testing-deployment.md`
+5. **`@mandatory` vs custom handler:** `@mandatory` intercepta strings vacíos con mensaje genérico antes que el handler custom. Solución: omitir `@mandatory` y dejar la validación al handler, o testear con strings de solo espacios. → `references/11-cds-modeling-guardrails.md`
+
+**Estado final:** 15 passing, 2 pending (intentional `.skip`s). Todos los generadores y el starter validan end-to-end.

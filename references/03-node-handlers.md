@@ -530,6 +530,89 @@ entity PublishJobs as projection on db.PublishJobs;
 // versus @restrict READ → 403 "Forbidden"
 ```
 
+## Draft entity validation — correct event targets
+
+For draft-enabled entities, the write lifecycle is:
+- `POST /Entity` → creates a draft (`IsActiveEntity=false`)
+- `PATCH /Entity(ID,IsActiveEntity=false)` → saves changes to the draft
+- `POST /Entity(ID,IsActiveEntity=false)/draftActivate` → activates draft → fires `SAVE`
+
+**CRITICAL (confirmed in CAP 9.x):** `before(['CREATE','UPDATE'], Entity, ...)` does NOT reliably fire during the draft lifecycle for `@odata.draft.enabled` entities. Use `before('SAVE', Entity, ...)` for all draft validation — it fires on `draftActivate`:
+
+```js
+this.before('SAVE', Entity, (req) => {
+  const { title, status, priority } = req.data;
+
+  if (title !== undefined && !title?.trim()) {
+    req.error(400, 'title must not be blank', 'in/title');
+  }
+  if (priority !== undefined && (priority < 1 || priority > 100)) {
+    req.error(400, 'priority must be between 1 and 100', 'in/priority');
+  }
+});
+```
+
+Note: `req.error(code, message, target)` accumulates errors — all validations run and all errors are returned together. Use `req.reject()` only when you want to stop immediately.
+
+**`IsActiveEntity` is a virtual element — never use in WHERE clauses:**
+
+`IsActiveEntity` is computed at runtime and does not exist as a DB column. Using it in `SELECT.one.from(Entity).where({ ID: id, IsActiveEntity: true })` throws `500 - Virtual elements are not allowed in expressions`. Filter by ID only:
+
+```js
+const entity = await SELECT.one.from(Entity).where({ ID: id });
+```
+
+Active vs draft distinction in unbound actions is handled by the service context — querying the service entity returns active entities by default.
+
+**Test pattern for draft validation:**
+
+Validation tests must go through `draftActivate`, not the initial POST:
+
+```js
+it('rejects blank title on activate', async () => {
+  const { data: draft } = await POST(BASE, { title: '   ' }); // whitespace-only bypasses @mandatory
+  const err = await POST(
+    `${BASE}(ID=${draft.ID},IsActiveEntity=false)/draftActivate`
+  ).then(() => null, (e) => e);
+  expect(err).to.exist;
+  expect(err.message).to.match(/title/i);
+});
+```
+
+Note: use whitespace-only (`'   '`) not empty string (`''`) when testing custom handler messages — CAP's `@mandatory` intercepts empty strings first with a generic "Provide the missing value." that doesn't name the field. Either omit `@mandatory` and let the handler own validation, or test with whitespace-only strings.
+
+**`before('SAVE', ...)` and draft table access:**
+
+Use `before('SAVE', ...)` only for cross-field or cross-entity invariants that can only be checked at activation, not at write time. Items in draft tables are not yet visible in the active tables at this point — query from draft tables explicitly:
+
+```js
+this.before('SAVE', Entity, async (req) => {
+  const { ID } = req.params?.[0] ?? {};
+  const items = await SELECT.from(Entity.drafts).where({ parent_ID: ID });
+  if (items.length === 0) req.error(400, 'At least one item is required');
+});
+```
+
+**`@readonly` on handler-managed fields:**
+
+When a field's value is exclusively controlled by the handler (e.g., `status`), mark it `@readonly` in the CDS model to prevent clients from directly setting it. The framework returns 400 if the client attempts to write it, and the handler sets the value in the appropriate events:
+
+```cds
+entity Approval : cuid, managed {
+  title  : String(100) @mandatory;
+  status : String(20) default 'DRAFT' @readonly;   // ← only handler writes this
+}
+```
+
+```js
+// Handler enforces transitions explicitly — client cannot bypass
+this.on('submit', async (req) => {
+  const { id } = req.data;
+  await UPDATE(Entity).where({ ID: id }).with({ status: 'SUBMITTED' });
+  return SELECT.one.from(Entity).where({ ID: id });
+});
+```
+
 ## Gap descubierto — 2026-04-16
 
 **Área:** G2 — Composition children no modificables directamente en draft-enabled parents

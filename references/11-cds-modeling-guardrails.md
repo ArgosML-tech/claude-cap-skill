@@ -226,3 +226,13 @@ This works because `*` (implied by `excluding`) expands after the implicit FKs a
 **Fix aplicado:** Eliminar `@assert.range` — la validación de valores del motor se delega al handler si fuera necesaria.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-22
+
+**Área:** `@mandatory` vs custom handler validation en draft entities
+**Síntoma:** Test `rejects blank title on activate` devolvía "400 - Provide the missing value." en vez de "title must not be blank". El test fallaba al verificar `/title/i` en el mensaje.
+**Causa:** La anotación `@mandatory` en el CDS intercepta tanto strings vacíos como strings de solo espacios durante `draftActivate`, con un mensaje genérico de CAP que no nombra el campo. El handler custom `before('SAVE')` nunca llega a ejecutarse para ese campo porque `@mandatory` lanza el error primero.
+**Fix aplicado:** Eliminar `@mandatory` del campo `title` en el CDS y dejar que el handler propio gestione toda la validación con mensajes de dominio específicos.
+**Regla generalizable:** No combinar `@mandatory` con validación custom en el handler para el mismo campo — elige uno. Si necesitas mensajes de error específicos, no uses `@mandatory`; si solo necesitas presencia, usa `@mandatory` sin handler. Si testeas mensajes custom, usa strings de solo espacios (`'   '`) para bypasear `@mandatory` (que solo intercepta `''` y `null`). Pero lo más limpio es omitir `@mandatory` y dejar el handler como único punto de validación.
+
+> Añadido desde cap-acc build — 2026-04-22.
