@@ -146,6 +146,53 @@ When the user wants the real S/4 flow, add explicitly:
 - Authentication aligned with the target landscape
 - Environment-specific configuration rather than hardcoded URLs or tokens
 
+## Retry with exponential backoff for external calls
+
+External services (S/4, BTP APIs, third-party REST) fail transiently with 503, 429, or network errors. Wrap calls with retry logic rather than propagating those errors directly to the UI.
+
+**Minimal implementation (no extra dependencies):**
+
+```js
+async function retry(fn, { attempts = 3, delay = 500, factor = 2, on = [503, 429, 'ETIMEDOUT'] } = {}) {
+  let wait = delay;
+  let lastErr;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const retryable = on.some(t =>
+        typeof t === 'number' ? (err.status === t || err.statusCode === t) : err.code === t
+      );
+      if (attempt < attempts && retryable) {
+        await new Promise(r => setTimeout(r, wait));
+        wait *= factor;
+      } else if (!retryable) {
+        throw err;           // non-retryable errors fail fast
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// Usage in a handler
+const result = await retry(
+  () => ExternalService.run(req.send('GET', '/BusinessPartners')),
+  { attempts: 3, delay: 500, factor: 2, on: [503, 429, 'ETIMEDOUT'] }
+);
+```
+
+**Key decisions:**
+- Non-retryable errors (400, 401, 403, 404) must fail immediately — retrying them wastes time and can confuse the caller
+- Use exponential backoff (`delay * factor^n`) to avoid hammering recovering services
+- Expose the `on` filter so each call site decides what counts as transient for that specific service
+- Do not retry inside `on('READ', ...)` handlers silently — surface the final error with `req.error()` so the client knows the request failed
+
+**Where NOT to use retry:**
+- On mutations (POST/PUT to external services) — the remote may have already processed the request; retrying creates duplicates unless the remote is idempotent or you hold a correlation ID
+- Inside `cds.spawn` periodic schedulers that already retry on the next tick
+
 ## Guardrails
 
 - Do not present a local mock as proof that destination or OAuth setup is done
@@ -171,3 +218,209 @@ When the user wants the real S/4 flow, add explicitly:
 **Fix aplicado:** Re-construir la query con `SELECT.from('API_BUSINESS_PARTNER.A_BusinessPartner', [...columns])` antes de pasarla al servicio externo.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+---
+
+## Importar APIs externas — `cds import` (SAP BTP Developer Guide)
+
+### Workflow para integrar una API OData de S/4
+
+```bash
+# 1. Importar el EDMX/API spec → genera CDS + metadatos en srv/external/
+cds import API_BUSINESS_PARTNER.edmx --as cds
+# genera: srv/external/API_BUSINESS_PARTNER.cds + srv/external/API_BUSINESS_PARTNER.json
+
+# 2. Instalar SAP Cloud SDK para conectividad y resilencia
+npm add @sap-cloud-sdk/http-client@3.x \
+        @sap-cloud-sdk/util@3.x \
+        @sap-cloud-sdk/connectivity@3.x \
+        @sap-cloud-sdk/resilience@3.x
+```
+
+### Proyección del servicio externo (remote.cds)
+
+```cds
+// srv/remote.cds
+using { API_BUSINESS_PARTNER as S4 } from './external/API_BUSINESS_PARTNER';
+
+service RemoteService {
+  entity BusinessPartner as projection on S4.A_BusinessPartner {
+    key BusinessPartner as ID,
+    FirstName as firstName,
+    LastName  as lastName,
+    BusinessPartnerName as name,
+    to_BusinessPartnerAddress as addresses
+  }
+  entity BusinessPartnerAddress as projection on S4.A_BusinessPartnerAddress {
+    BusinessPartner as ID,
+    AddressID as addressId,
+    to_EmailAddress as email,
+    to_PhoneNumber  as phoneNumber
+  }
+}
+```
+
+### SELECT con expand inline para servicios remotos
+
+Los servicios remotos no soportan path expressions — se deben usar expands explícitos:
+
+```js
+async onCustomerRead(req) {
+  const { BusinessPartner } = this.remoteService.entities;
+
+  let result = await this.S4bupa.run(
+    SELECT.from(BusinessPartner, bp => {
+      bp('*'),
+      bp.addresses(address => {
+        address('email'),
+        address.email(emails => {
+          emails('email')
+        })
+      })
+    }).limit(top, skip)
+  );
+
+  // aplanar la estructura
+  result = result.map(bp => ({
+    ID: bp.ID,
+    name: bp.name,
+    email: bp.addresses[0]?.email[0]?.email
+  }));
+  result.$count = 1000;  // necesario para value help en Fiori
+  return result;
+}
+```
+
+### Cachear datos remotos localmente con UPSERT
+
+```js
+async onCustomerCache(req, next) {
+  const { Customers } = this.entities;
+  const newCustomerId = req.data.customer_ID;
+  const result = await next();  // ejecutar operación original primero
+
+  if (newCustomerId && req.event === 'CREATE') {
+    const { BusinessPartner } = this.remoteService.entities;
+    const customer = await this.S4bupa.run(
+      SELECT.one(BusinessPartner, bp => {
+        bp('*'),
+        bp.addresses(address => {
+          address('email', 'phoneNumber'),
+          address.email(e => e('email')),
+          address.phoneNumber(p => p('phone'))
+        })
+      }).where({ ID: newCustomerId })
+    );
+
+    if (customer) {
+      customer.email = customer.addresses[0]?.email[0]?.email;
+      customer.phone = customer.addresses[0]?.phoneNumber[0]?.phone;
+      delete customer.addresses;
+      await UPSERT.into(Customers).entries(customer);
+    }
+  }
+  return result;
+}
+```
+
+### Inicializar conexiones en `init()`
+
+```js
+async init() {
+  this.on(['CREATE', 'UPDATE'], 'Incidents', (req, next) => this.onCustomerCache(req, next));
+  this.on('READ', 'Customers', req => this.onCustomerRead(req));
+
+  // conectar a servicios externos — await obligatorio en init()
+  this.S4bupa = await cds.connect.to('API_BUSINESS_PARTNER');
+  this.remoteService = await cds.connect.to('RemoteService');
+
+  return super.init();
+}
+```
+
+### Modificar Associations → Compositions en EDMX importado
+
+El EDMX generado usa `Association` para relaciones de navegación. Para que CAP pueda hacer expands anidados, cambiar a `Composition`:
+
+```cds
+// srv/external/API_BUSINESS_PARTNER.cds — editar después del import
+entity A_BusinessPartner {
+  // cambiar Association → Composition para poder expandir
+  to_BusinessPartnerAddress : Composition of many A_BusinessPartnerAddress
+    on to_BusinessPartnerAddress.BusinessPartner = BusinessPartner;
+}
+entity A_BusinessPartnerAddress {
+  to_EmailAddress : Composition of many A_AddressEmailAddress
+    on to_EmailAddress.AddressID = AddressID;
+  to_PhoneNumber  : Composition of many A_AddressPhoneNumber
+    on to_PhoneNumber.AddressID = AddressID;
+}
+```
+
+---
+
+## SAP Event Mesh — messaging en CAP
+
+### Configuración en package.json
+
+```json
+{
+  "cds": {
+    "requires": {
+      "messaging": {
+        "kind": "local-messaging",
+        "[production]": {
+          "kind": "enterprise-messaging-shared",
+          "format": "cloudevents"
+        }
+      }
+    }
+  }
+}
+```
+
+`local-messaging` funciona in-process en desarrollo. En producción usa SAP Event Mesh con formato CloudEvents.
+
+### Emitir eventos
+
+```js
+// srv/external/API_BUSINESS_PARTNER.js — handler del servicio externo
+module.exports = function () {
+  const { A_BusinessPartner } = this.entities;
+
+  this.after('UPDATE', A_BusinessPartner, async data => {
+    const messaging = await cds.connect.to('messaging');
+    await messaging.emit(
+      'sap.s4.beh.businesspartner.v1.BusinessPartner.Changed.v1',
+      { BusinessPartner: data.BusinessPartner }
+    );
+  });
+}
+```
+
+### Consumir eventos
+
+```js
+// En init() del handler del servicio que escucha
+async init() {
+  this.messaging = await cds.connect.to('messaging');
+  this.messaging.on(
+    'sap.s4.beh.businesspartner.v1.BusinessPartner.Changed.v1',
+    async ({ event, data }) => this.onBusinessPartnerChanged(event, data)
+  );
+  return super.init();
+}
+
+async onBusinessPartnerChanged(event, data) {
+  const { Customers } = this.entities;
+  const Id = data.BusinessPartner;
+  // ... actualizar caché local con datos del BP
+}
+```
+
+### Tests con mocks de mensajería
+
+```js
+// En tests/test.js — usar --with-mocks para activar local-messaging
+const { GET, POST, expect } = cds.test(__dirname + '../../', '--with-mocks');
+```

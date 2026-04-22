@@ -509,3 +509,187 @@ When multitenancy is confirmed:
 **Fix aplicado:** Pasar `--credentials "admin:"` al script de validación.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+---
+
+## Comandos `cds add` para producción (SAP BTP Developer Guide)
+
+### Workflow completo de preparación para deploy
+
+```bash
+# 1. Añadir HANA como DB de producción
+cds add hana --for production
+# → añade @cap-js/hana en package.json, configura profile [production].db = "hana"
+
+# 2. Añadir XSUAA y generar xs-security.json
+cds add xsuaa --for production
+# → añade @sap/xssec, configura [production].auth = "xsuaa", genera xs-security.json con scopes/roles
+
+# 3. Añadir SAP Build Work Zone
+cds add workzone-standard   # CF
+cds add workzone            # Kyma / genérico
+
+# 4. Verificar la config de producción
+cds env requires -4 production
+# output: { db: { kind: 'hana' }, auth: { kind: 'jwt', vcap: { label: 'xsuaa' } } }
+
+# 5. Test build de producción
+cds build --production
+```
+
+### Deploy Cloud Foundry — `cds up` (all-in-one)
+
+```bash
+cf api <API-ENDPOINT>
+cf login
+cf target -o <ORG> -s <SPACE>
+
+cds up
+# equivale a: cds add mta → mbt build → cf deploy
+```
+
+Verificar después:
+```bash
+cf services    # confirmar que los servicios se crearon
+cf apps        # confirmar que los módulos están running
+```
+
+### Deploy Kyma — `cds add kyma` + `cds up -2 k8s`
+
+```bash
+# Prerequisitos: kubectl, kubelogin, helm, pack, Docker/Rancher Desktop
+
+# Añadir Helm chart al proyecto
+cds add kyma
+
+# Crear namespace
+kubectl create namespace incident-management
+kubectl label namespace incident-management istio-injection=enabled
+
+# Deploy (build imagen + push + helm install)
+cds up -2 k8s --namespace incident-management
+```
+
+`cds add kyma` genera un Helm chart en `chart/` con toda la configuración de servicios BTP, XSUAA, HANA, Approuter.
+
+### `xs-security.json` — generado automáticamente desde CDS annotations
+
+`cds add xsuaa` genera `xs-security.json` a partir de los `@requires` del modelo CDS:
+
+```json
+{
+  "scopes": [
+    { "name": "$XSAPPNAME.support", "description": "support" },
+    { "name": "$XSAPPNAME.admin",   "description": "admin" }
+  ],
+  "role-templates": [
+    { "name": "support", "scope-references": ["$XSAPPNAME.support"] },
+    { "name": "admin",   "scope-references": ["$XSAPPNAME.admin"] }
+  ]
+}
+```
+
+Si se añaden nuevos roles al CDS después del `cds add xsuaa`, regenerar con `cds add xsuaa --for production` o editar manualmente.
+
+### `xs-app.json` — configuración del Approuter
+
+Generado automáticamente. Controla routing entre browser y backend:
+
+```json
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/?odata/(.*)$",
+      "target": "/odata/$1",
+      "destination": "incident-management-srv-api",
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"
+    }
+  ]
+}
+```
+
+### `manifest.json` — nota crítica para BTP deploy
+
+El `uri` del `mainService` en manifest.json debe ser **relativo** (sin `/` inicial) cuando se despliega en BTP con Approuter:
+
+```json
+"dataSources": {
+  "mainService": {
+    "uri": "odata/v4/processor/",   // ← sin / inicial
+    ...
+  }
+}
+```
+
+Con `/` inicial falla la autenticación en el Approuter porque la URI se interpreta como absoluta al base URL.
+
+Para Work Zone, añadir `sap.cloud` y `crossNavigation` al manifest:
+```json
+"sap.app": {
+  "crossNavigation": {
+    "inbounds": {
+      "incidents-display": {
+        "semanticObject": "incidents",
+        "action": "display",
+        "signature": { "parameters": {}, "additionalParameters": "allowed" }
+      }
+    }
+  }
+},
+"sap.cloud": {
+  "public": true,
+  "service": "incidentmanagement.service"
+}
+```
+
+### Tests de draft — ciclo completo con `draftEdit`
+
+El ciclo de edición de una entidad activa existente requiere `draftEdit` antes de poder modificar:
+
+```js
+// 1. Crear draft nuevo
+const { data: draft } = await POST('/odata/v4/processor/Incidents', { title: 'Test' })
+// draft.IsActiveEntity = false
+
+// 2. Activar draft
+const { data: active } = await POST(
+  `/odata/v4/processor/Incidents(ID=${draft.ID},IsActiveEntity=false)/ProcessorService.draftActivate`
+)
+// active.IsActiveEntity = true  ← NOTE: service prefix "ProcessorService." en el action path
+
+// 3. Editar entidad activa → crear draft de edición
+await POST(
+  `/odata/v4/processor/Incidents(ID=${active.ID},IsActiveEntity=true)/ProcessorService.draftEdit`,
+  { PreserveChanges: true }
+)
+
+// 4. Modificar el draft de edición
+await PATCH(`/odata/v4/processor/Incidents(ID=${active.ID},IsActiveEntity=false)`, {
+  status_code: 'C'
+})
+
+// 5. Activar (guardar cambios)
+await POST(
+  `/odata/v4/processor/Incidents(ID=${active.ID},IsActiveEntity=false)/ProcessorService.draftActivate`
+)
+```
+
+**IMPORTANTE:** El action path incluye el **nombre del servicio como prefijo**: `ProcessorService.draftActivate`, no solo `draftActivate`.
+
+### `cds add http` — generar archivos `.http` para REST testing
+
+```bash
+cds add http --filter AdminService
+# → genera tests/http/AdminService.http con requests de ejemplo para todos los endpoints
+```
+
+Los archivos `.http` son compatibles con VS Code REST Client y SAP Business Application Studio.

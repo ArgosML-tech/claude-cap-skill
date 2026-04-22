@@ -648,3 +648,99 @@ this.on('submit', async (req) => {
 **Fix aplicado:** (1) Usar `SELECT.one.from(...).columns('ID','fileContent',...)` explícito. (2) Convertir el stream a Buffer con `for await (const chunk of stream)` antes de pasarlo a `xlsx.read()`.
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+---
+
+## Logging en CAP — `cds.log`
+
+CAP provee un facade minimalista de logging. **No usar `console.log` en handlers.**
+
+```js
+const LOG = cds.log('processor-service');  // namespace para filtrado
+
+LOG.info('Incident processed', { id, user: req.user?.id });
+LOG.warn('Slow query detected');
+LOG.error('Failed to connect', err);
+```
+
+Configurar niveles por módulo en `package.json`:
+
+```json
+{
+  "cds": {
+    "log": {
+      "levels": {
+        "sqlite": "debug",
+        "processor-service": "info",
+        "cds": "warn"
+      }
+    }
+  }
+}
+```
+
+Niveles: `debug`, `info`, `warn`, `error`, `silent`.
+
+## Tagged template literals en WHERE
+
+```js
+// Más legible para condiciones con paths de asociación
+const closed = await SELECT.one(1).from(req.subject).where`status.code = 'C'`
+if (closed) req.reject(`Can't modify a closed incident!`)
+```
+
+Los backticks en `.where\`...\`` son tagged templates — CAP los parsea como CDS expressions, permitiendo path expressions como `status.code` (navegación de asociación). No usar string interpolation con valores de usuario en este contexto.
+
+## Custom audit log en `server.js`
+
+Para generar audit logs personalizados (ej. eventos de seguridad 403), crear `server.js` en la raíz del proyecto:
+
+```js
+const cds = require('@sap/cds')
+
+let audit
+
+cds.on('served', async () => {
+  audit = await cds.connect.to('audit-log')
+})
+
+// log 403 en requests normales
+cds.on('bootstrap', app => {
+  app.use((req, res, next) => {
+    req.on('close', () => {
+      if (res.statusCode === 403) {
+        audit.tx(async () => {
+          await audit.log('SecurityEvent', {
+            data: {
+              user: cds.context.user?.id || 'unknown',
+              action: `Unauthorized access to "${req.originalUrl}"`
+            },
+            ip: req.ip
+          })
+        })
+      }
+    })
+    next()
+  })
+})
+
+// log 403 en batch subrequests
+cds.on('serving', srv => {
+  if (srv instanceof cds.ApplicationService) {
+    srv.on('error', (err, req) => {
+      if (err.code === 403) {
+        const { originalUrl, ip } = req.http.req
+        // handle batch subrequest path
+      }
+    })
+  }
+})
+
+module.exports = cds.server  // obligatorio — extiende el server por defecto
+```
+
+Puntos clave:
+- `cds.on('served', ...)` — se ejecuta una vez, todos los servicios ya están disponibles; aquí conectar a servicios externos como audit-log.
+- `cds.on('bootstrap', app => ...)` — Express app disponible; aquí registrar middleware.
+- `cds.on('serving', srv => ...)` — cada servicio CAP está siendo inicializado; útil para error handlers por servicio.
+- `module.exports = cds.server` es **obligatorio** en `server.js` — sin él el servidor no arranca.

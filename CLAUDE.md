@@ -27,6 +27,7 @@ Toda la lógica CAP vive en `references/`. Antes de tomar cualquier decisión so
 | Servicios externos / S/4 | `references/10-cap-external-services.md` |
 | Guardrails de modelado CDS | `references/11-cds-modeling-guardrails.md` |
 | Visibilidad por rol y singletons | `references/12-role-driven-visibility-singletons.md` |
+| Plugins BTP (@cap-js) y servicios gestionados | `references/13-btp-plugins-services.md` |
 
 No duplicar este conocimiento en el razonamiento. Leerlo, aplicarlo, y registrar cualquier desviación en `build-log.md`.
 
