@@ -338,3 +338,12 @@ cds add data
 ```
 
 Genera archivos CSV vacíos en `db/data/` para todas las entidades, con cabeceras correctas. Útil como punto de partida para seed data. Los archivos `.texts.csv` (para CodeList i18n) se dejan vacíos hasta tener traducciones.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Modelo / Servicio CDS
+**Síntoma:** `cds build` falla con "can't auto-redirect" al exponer la misma entidad dos veces en un servicio
+**Causa:** `CandidatePairs` y `ReviewablePairs` eran dos proyecciones de `mas.CandidatePairs` — CAP no puede resolver redirecciones de asociaciones cuando hay ambigüedad
+**Fix aplicado:** fusionar ambas en una sola entidad `CandidatePairs` con `@readonly` + `actions {}`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

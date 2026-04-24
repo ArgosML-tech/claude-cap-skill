@@ -872,3 +872,39 @@ Before proposing an extension, state clearly which FE behavior is standard and w
 **Fix aplicado:** Añadir registro seed `DEMO_01` al CSV para que la lista tenga al menos una fila en modo dev (sin `templateFile`, solo metadatos).
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Playwright — falso positivo "Create button NOT visible" en entidades @readonly
+**Síntoma:** `validate-fe.js` marca como FAIL "Create button NOT visible in List Report toolbar" para `ReviewService.CandidatePairs`
+**Causa:** El script comprueba la presencia del botón Create independientemente del tipo de entidad. Para entidades `@readonly` en el servicio, FE elimina correctamente el botón Create. El script no distingue entre "falta por error" y "falta por diseño intencional".
+**Fix aplicado:** Aceptado como falso positivo documentado. El criterio de salida del plan ("List Report muestra pares, Object Page permite ejecutar las 4 acciones") está cumplido. Paso 1 y Paso 2 verdes (17/17). Playwright confirmó List Report con 5 columnas + datos, navegación al Object Page via row click.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** @Common.SideEffects en acciones bound
+**Síntoma:** @Common.SideEffects en acciones bound
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** navigation config en ListReport manifest
+**Síntoma:** navigation config en ListReport manifest
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** @cds.query.limit en entidades de servicio
+**Síntoma:** @cds.query.limit en entidades de servicio
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

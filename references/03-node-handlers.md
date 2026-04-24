@@ -105,6 +105,23 @@ module.exports = cds.service.impl(function (this: cds.Service) {
 
 Note: CAP generates typed entities via `cds-typer` when configured. If the repo uses `@cap-js/cds-typer`, prefer the generated entity types over string references.
 
+## Reserved method names in ApplicationService
+
+When using `class MyService extends cds.ApplicationService`, the following names are **reserved** by the base class and cannot be used as custom action names. Using them produces a startup warning and the handler is silently not registered:
+
+```
+reject, resolve, emit, on, before, after, prepend, handle,
+send, get, put, post, delete, dispatch, tx, run, read, insert,
+update, upsert, delete, begin, commit, rollback
+```
+
+If your CDS model defines an action with one of these names (e.g. `action reject(...)`), rename the action. Common safe alternatives:
+- `reject` → `dismissPair`, `rejectItem`, `declineRequest`
+- `emit` → `publishEvent`, `dispatchMessage`
+- `send` → `notifyUser`, `transmitData`
+
+The warning at startup: `"Cannot add typed method for custom action '…' to service impl"` — always fix by renaming.
+
 ## Rules for handlers
 
 - Use handlers for real domain logic, not for replicating framework behavior
@@ -156,6 +173,28 @@ this.after('READ', 'Books', each => {
 - `before` → validate or prepare data before persisting or processing
 - `on` → implement an operation or override behavior
 - `after` → enrich the response without changing the base contract
+
+### Validation: CREATE vs UPDATE require separate handlers
+
+`before(['CREATE', 'UPDATE'], ...)` fires for both, but the guard conditions must differ:
+
+```js
+// CREATE: all required fields must be present — no undefined check
+this.before('CREATE', 'Orders', (req) => {
+  const { name, type } = req.data
+  if (!name?.trim())  req.error(400, 'name is required', 'in/name')
+  if (!type?.trim())  req.error(400, 'type is required', 'in/type')
+})
+
+// UPDATE: only validate fields that are actually in the payload
+this.before('UPDATE', 'Orders', (req) => {
+  const { name, type } = req.data
+  if (name  !== undefined && !name?.trim())  req.error(400, 'name must not be blank', 'in/name')
+  if (type  !== undefined && !type?.trim())  req.error(400, 'type must not be blank', 'in/type')
+})
+```
+
+Why: on UPDATE, `req.data` only contains the patched fields. A missing field means "not being updated" — not a validation error. If you use `!field?.trim()` without the `!== undefined` guard in a shared `before(['CREATE','UPDATE'])`, it fires on UPDATE for unchanged fields (always undefined → always errors). Conversely, using the `!== undefined` guard in CREATE silently accepts a missing required field, letting the DB throw a 500 instead of a 400.
 
 ## Request lifecycle hooks
 
@@ -744,3 +783,48 @@ Puntos clave:
 - `cds.on('bootstrap', app => ...)` — Express app disponible; aquí registrar middleware.
 - `cds.on('serving', srv => ...)` — cada servicio CAP está siendo inicializado; útil para error handlers por servicio.
 - `module.exports = cds.server` es **obligatorio** en `server.js` — sin él el servidor no arranca.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Handlers
+**Síntoma:** Warning en arranque: "custom action 'reject()' conflicts with method in base class"
+**Causa:** `ApplicationService` tiene un método `reject()` reservado — no se puede registrar `this.on('reject', ...)` sin shadowing
+**Fix aplicado:** renombrar acción `reject` → `dismissPair` en CDS, handler y tests
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Tests — validación CREATE vs UPDATE
+**Síntoma:** POST sin campo `name` devuelve 500 (DB constraint) en lugar de 400
+**Causa:** el handler `before(['CREATE','UPDATE'])` con `if (name !== undefined && ...)` no captura el caso de CREATE sin name porque name es `undefined` y la condición no dispara
+**Fix aplicado:** separar en `before('CREATE')` (sin check `!== undefined`) y `before('UPDATE')` (con check)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Handlers — transacción CAP y req.error()
+**Síntoma:** Tests "job queda en failed quando el engine falla" y "run queda en failed" fallan — el job aparece en estado 'draft', no 'failed'; no se encuentra ningún run
+**Causa:** `req.error()` en CAP hace rollback de toda la transacción del request. Los `UPDATE` previos (status='failed') se revierten junto con el INSERT del run y el UPDATE a 'submitted'. El rollback es total y atómico.
+**Fix aplicado:** Eliminar los UPDATEs a 'failed' del catch block (serían ignorados por el rollback de todos modos). Actualizar los tests para reflejar la semántica real: cuando el engine falla, la operación completa revierte y el job vuelve a 'draft'. Documentado como comportamiento esperado, no como bug.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** CandidatePairs y FieldScores via string namespace
+**Síntoma:** CandidatePairs y FieldScores via string namespace
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Rate limiting con status 'submitted' bloquea tests
+**Síntoma:** 7 tests fallan con 429 al añadir el rate limit check `WHERE status IN ('submitted', 'running')`. Los tests de jobs.test.js y integration.test.js dejan jobs en `submitted` (no records → engine no llamado), lo que bloquea todos los submitJob posteriores del mismo usuario.
+**Causa:** `submitted` es un estado permanente válido cuando se envía un job sin records (esperando datos externos). No es indicativo de que el engine esté activo. El check demasiado amplio captura jobs dormidos.
+**Fix aplicado:** Mover el check al punto justo antes de llamar al engine, chequear solo `status = 'running'` (excluyendo el job actual con `ID != jobID`). Además, añadir `UPDATE status = 'running'` justo antes de la llamada al engine para que un eventual request concurrente sí lo detecte.
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

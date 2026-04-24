@@ -12,6 +12,29 @@ CAP handles both, but they are configured separately.
 ### Local / testing
 Use mocked auth (`cds.requires.auth.kind = "mocked"`) unless the project explicitly sets otherwise. Mocked auth lets you test roles and restrictions without a real identity provider.
 
+**Mock users must be configured in `cds.requires.auth.users` (in `package.json`):**
+
+```json
+{
+  "cds": {
+    "requires": {
+      "auth": {
+        "kind": "mocked",
+        "users": {
+          "admin":      { "roles": ["admin"] },
+          "reviewer":   { "roles": ["reviewer"] },
+          "supervisor": { "roles": ["supervisor"] }
+        }
+      }
+    }
+  }
+}
+```
+
+Critical: in `@sap/cds@9`, mock users defined under `cds.users` (root level) or `cds.auth.users` are **silently ignored**. Only `cds.requires.auth.users` is read by the auth middleware. If all requests with `@requires` return 403, check this first.
+
+In tests: use `app.axios.defaults.auth = { username: 'admin', password: '' }` — the password is always empty for mocked users.
+
 ### Cloud / production
 Align the proposal with the existing landscape:
 - **IAS** (SAP Identity and Authentication Service) — modern cloud-native apps
@@ -291,6 +314,69 @@ GET /api/sales/SalesOrderDrafts?$filter=IsActiveEntity eq false   → drafts onl
 
 This matters for tests: if the test setup creates orders via POST (which creates drafts), a subsequent `GET /EntitySet` to verify them will return 0 results. Use `?$filter=IsActiveEntity eq false` or activate the drafts first.
 
+## HTTP hardening in production CAP apps
+
+CAP exposes an internal Express app via `cds.on('bootstrap', app => ...)`. This is the correct integration point for Express middleware — it fires once after the Express app is created but before routes are mounted.
+
+```js
+const cds = require('@sap/cds');
+
+cds.on('bootstrap', (app) => {
+  // Security headers — implemented manually to avoid auditing third-party packages
+  app.use((_req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'");
+    next();
+  });
+});
+```
+
+Use the bootstrap hook instead of wiring middleware in a handler `init()` — by the time `init()` runs, the Express app is already serving requests.
+
+## Health and readiness endpoints
+
+For Cloud Foundry (health check) and Kyma (liveness + readiness probes), register endpoints in the bootstrap hook:
+
+```js
+cds.on('bootstrap', (app) => {
+  // Liveness: is the process alive?
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'UP', timestamp: new Date().toISOString() });
+  });
+
+  // Readiness: can the app serve traffic? (verifies DB connectivity)
+  app.get('/ready', async (_req, res) => {
+    try {
+      await cds.run('SELECT 1');                   // SQLite
+      // await cds.db.run('SELECT 1 FROM DUMMY'); // HANA
+      res.json({ status: 'READY', db: 'connected' });
+    } catch (err) {
+      res.status(503).json({ status: 'NOT_READY', reason: err.message });
+    }
+  });
+});
+```
+
+Wiring in CF (`manifest.yml` or MTA):
+```bash
+cf set-health-check my-app-srv http --endpoint /health
+```
+
+Wiring in Kyma (`deployment.yaml`):
+```yaml
+livenessProbe:
+  httpGet: { path: /health, port: 4004 }
+  initialDelaySeconds: 15
+readinessProbe:
+  httpGet: { path: /ready, port: 4004 }
+  initialDelaySeconds: 10
+```
+
+Important: CAP does NOT expose `/health` by default. Without an explicit registration the CF health check will get 404 and consider the app unhealthy.
+
 ## Anti-patterns
 
 - Repeating manual auth checks across many handlers instead of using `@requires` / `@restrict`
@@ -340,6 +426,24 @@ This matters for tests: if the test setup creates orders via POST (which creates
 **Área:** G4 — `validate-metadata.js` Pass 2 necesita `--credentials` cuando el servicio requiere auth
 **Síntoma:** Pass 2 falla aunque el servidor está corriendo — recibe 401
 **Causa:** El servicio tiene `@requires: 'authenticated-user'`, por lo que `$metadata` devuelve 401 sin credenciales
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Tests — mock users
+**Síntoma:** 403 Forbidden al llamar a servicios con roles declarados
+**Causa:** servicios con `@requires: 'admin'` necesitan usuarios mock configurados en `package.json` con el rol correspondiente
+**Fix aplicado:** añadir `cds.requires.auth.kind: "mocked"` + `users: { admin: { roles: ["admin"] }, reviewer: { roles: ["reviewer"] } }` en `package.json`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** URL engine via env var
+**Síntoma:** URL engine via env var
+**Causa:** (see build-log for details)
 **Fix aplicado:** (see build-log for details)
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

@@ -173,3 +173,57 @@ package.json          ← @sap/cds dependency, cds config section
 **Fix aplicado:** Mover `"users": {...}` dentro de `"cds": { "requires": { "auth": { "kind": "mocked", "users": {...} } } }`
 
 > Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Logging JSON en Python
+**Síntoma:** Logging JSON en Python
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Validación max_records en Python engine
+**Síntoma:** Validación max_records en Python engine
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Dockerfile python:3.12-slim
+**Síntoma:** Dockerfile python:3.12-slim
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Batch INSERT — atomicidad real
+**Síntoma:** Batch INSERT — atomicidad real
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Idempotencia en submitJob
+**Síntoma:** Idempotencia en submitJob
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** exportDecisions enriquecido
+**Síntoma:** exportDecisions enriquecido
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.

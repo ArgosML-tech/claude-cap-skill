@@ -97,6 +97,34 @@ Inspect the project's mocked users config (in `package.json` or `.cdsrc.json`) t
 
 Note: call `cds.test()` **before** importing other `@sap/cds` modules — loading order matters for environment setup.
 
+### Service URL path derivation rule (CAP 9.x)
+
+CAP derives the HTTP path of a service from its name automatically. **Never guess — derive it:**
+
+| Service name in CDS | HTTP path |
+|---|---|
+| `AdminService` | `/odata/v4/admin` |
+| `ReviewService` | `/odata/v4/review` |
+| `CatalogService` | `/odata/v4/catalog` |
+| `ProcessorService` | `/odata/v4/processor` |
+
+Rule: remove trailing `Service` suffix, then lowercase. To override, annotate the service:
+
+```cds
+service AdminService @(path: '/odata/v4/admin-service') { ... }
+```
+
+In tests, always use the derived path. Using the full service name (e.g. `/odata/v4/AdminService/...`) returns 404.
+
+### `cds init` facet names (CAP 9.x)
+
+```bash
+cds init myapp --add sqlite        # SQLite support
+cds add lint                       # ESLint config (NOT "eslint" — that facet doesn't exist)
+cds add xsuaa                      # XSUAA auth
+cds add hana                       # HANA DB support
+```
+
 ### Test guidelines
 
 - Place tests under `test/`
@@ -693,3 +721,75 @@ cds add http --filter AdminService
 ```
 
 Los archivos `.http` son compatibles con VS Code REST Client y SAP Business Application Studio.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Scaffolding
+**Síntoma:** `cds init cap --add sqlite,eslint` falla — faceta `eslint` desconocida
+**Causa:** en CAP 9.x la faceta se llama `lint`, no `eslint`
+**Fix aplicado:** `cds init cap --add sqlite` y luego `cds add lint` si se necesita
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Tests — auth
+**Síntoma:** `TypeError: Invalid URL` en todos los tests
+**Causa:** los tests usaban `cds.test.axios` (instancia global sin baseURL) en lugar de `app.axios` donde `app = cds.test(__dirname + '/..')`
+**Fix aplicado:** `const app = cds.test(...)` y usar `app.axios` en todas las llamadas
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-23
+
+**Área:** Tests — rutas de servicio
+**Síntoma:** 404 en todas las peticiones HTTP a `/odata/v4/AdminService/...`
+**Causa:** CAP 9.x genera los paths de servicio eliminando el sufijo "Service" y en minúsculas: `AdminService` → `/odata/v4/admin`, `ReviewService` → `/odata/v4/review`
+**Fix aplicado:** actualizar todas las URLs de test a `/odata/v4/admin/` y `/odata/v4/review/`
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Mock de cds.connect.to en tests
+**Síntoma:** Mock de cds.connect.to en tests
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** records como parámetro opcional de submitJob
+**Síntoma:** records como parámetro opcional de submitJob
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Seed data — UUID format en CSV
+**Síntoma:** Primera iteración de Playwright daba 400 Bad Request al navegar al Object Page: "Invalid value: demo"
+**Causa:** Las IDs en los CSV seed (`demo-job-001`, `demo-pair-001`) no son UUIDs válidos. La entidad usa `cuid` (tipo `UUID`). CAP valida el formato UUID al recibir el parámetro de clave en la URL OData.
+**Fix aplicado:** Reemplazar IDs con UUIDs válidos en formato estándar (`aaaaaaaa-0000-0000-0000-000000000001`, etc.)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Seed data no afecta tests de integración
+**Síntoma:** Seed data no afecta tests de integración
+**Causa:** (see build-log for details)
+**Fix aplicado:** (see build-log for details)
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+
+## Gap descubierto — 2026-04-24
+
+**Área:** Test de exportDecisions roto tras añadir campos nuevos al export
+**Síntoma:** `pairs exportados incluyen los campos requeridos` falla con AssertionError: `have.all.keys` exige match exacto de keys; el export ahora devuelve `recordA_source`, `recordB_source` y `decision` que el test original no incluía.
+**Causa:** El test fue escrito contra la estructura antigua (solo 7 campos). Al enriquecer el export con `PairDecisions` y añadir `recordA_source`/`recordB_source`, la estructura correcta tiene 10 campos.
+**Fix aplicado:** Cambiar `have.all.keys` por `include.all.keys` (subset check) + `have.property('decision')` (campo enriquecido con valor null cuando sin revisar).
+
+> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
