@@ -187,14 +187,41 @@ Si Playwright no está disponible, el agente lo indica explícitamente y no decl
 
 ## Learning loop
 
-Al terminar cualquier build, el agente genera `build-log.md` en el proyecto construido y ejecuta `close-learning-loop.js`. El script:
+Al terminar cualquier build, el agente genera `build-log.md` en el proyecto construido y ejecuta `close-learning-loop.js`. El flujo tiene dos fases:
 
+**Fase 1 — Propuesta (por defecto):**
+
+```bash
+node scripts/close-learning-loop.js \
+  --build-log ./workspace/mi-app/build-log.md \
+  --evolution-log agent-evolution.md \
+  --references-dir references/
+```
+
+El script:
 1. Lee las incidencias del `build-log.md`.
-2. Mapea cada una a su `reference` candidata.
-3. Añade una sección `## Gap descubierto — <fecha>` al final de esa reference.
-4. Registra una entrada en `agent-evolution.md`.
+2. Descarta gaps fuera de ámbito CAP (Python, Dockerfile, FastAPI, etc.).
+3. Deduplica por hash estable — no por texto.
+4. Escribe propuestas revisables en `proposed-reference-updates.md` con estado `proposed`.
+5. Registra una entrada en `agent-evolution.md` como `propuesto (pendiente revisión)`.
 
-**Advertencia:** las actualizaciones automáticas a `references/` registran conocimiento táctico del build concreto. Ese conocimiento no siempre es generalizable. Revisar manualmente las entradas antes de considerarlas parte del conocimiento operativo estable.
+**`references/` no se toca en este paso.**
+
+**Fase 2 — Aplicar tras revisión humana:**
+
+Revisar `proposed-reference-updates.md`. Si las propuestas son generalizables a otros proyectos CAP, aplicarlas:
+
+```bash
+node scripts/close-learning-loop.js \
+  --build-log ./workspace/mi-app/build-log.md \
+  --evolution-log agent-evolution.md \
+  --references-dir references/ \
+  --apply-to-references
+```
+
+Solo entonces se añaden secciones `## Gap descubierto — <fecha>` a los archivos de `references/`.
+
+**Importante:** el conocimiento bruto de un build concreto no es automáticamente conocimiento generalizable. Revisar `proposed-reference-updates.md` antes de aplicar.
 
 ---
 

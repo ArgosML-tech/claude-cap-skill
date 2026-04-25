@@ -193,7 +193,7 @@ Crear `<ruta-proyecto>/build-log.md` con el formato:
 [Escribir esta sección solo si no hubo ninguna incidencia]
 ```
 
-**Paso B — Ejecutar el cierre de aprendizaje:**
+**Paso B — Ejecutar el cierre de aprendizaje (modo seguro, por defecto):**
 
 ```bash
 node scripts/close-learning-loop.js \
@@ -202,15 +202,30 @@ node scripts/close-learning-loop.js \
   --references-dir references/
 ```
 
-El script:
+El script, por defecto:
 1. Parsea las incidencias del build-log
-2. Mapea cada una a la reference candidata
-3. Añade una sección `## Gap descubierto — <fecha>` al final de esa reference
-4. Añade una entrada a `agent-evolution.md`
+2. Filtra gaps fuera de ámbito CAP (Python, Dockerfile, FastAPI, etc.)
+3. Deduplica usando hash estable — no por texto
+4. Escribe propuestas revisables en `proposed-reference-updates.md` — **NO modifica `references/`**
+5. Añade una entrada a `agent-evolution.md` marcada como `propuesto (pendiente revisión)`
+
+**`references/` solo se modifica si se pasa el flag `--apply-to-references`**, y solo después de que el usuario haya revisado las propuestas en `proposed-reference-updates.md`.
 
 **Paso C — Informar al usuario:**
 
-Listar qué gaps se registraron, en qué references, y si alguno requiere revisión manual antes de que el conocimiento sea generalizable.
+Listar qué propuestas se generaron, en qué reference candidata, y cuáles fueron descartadas por estar fuera de ámbito. Dejar claro que las propuestas en `proposed-reference-updates.md` **no son conocimiento validado** — son candidatos a revisión humana antes de incorporarse a `references/`.
+
+**Paso D — Aplicar tras revisión humana (opcional, requiere decisión explícita):**
+
+Solo cuando el usuario confirme que las propuestas son generalizables:
+
+```bash
+node scripts/close-learning-loop.js \
+  --build-log <ruta-proyecto>/build-log.md \
+  --evolution-log agent-evolution.md \
+  --references-dir references/ \
+  --apply-to-references
+```
 
 ---
 
