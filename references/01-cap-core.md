@@ -98,7 +98,7 @@ package.json          ← @sap/cds dependency, cds config section
 | Si la spec calla sobre... | Decisión por defecto |
 |---|---|
 | Auth en local | `mocked` auth en `.cdsrc.json` |
-| Usuarios de prueba | Definir en `package.json → cds.users` un usuario por rol |
+| Usuarios de prueba | Definir usuarios mock bajo `cds.requires.auth.users`, normalmente en `package.json` o `.cdsrc.json` según el perfil del proyecto. Ver `references/04-security-auth.md` para detalles. |
 | Restricción de instancia no especificada | Sin restricción — solo restricción de rol (`@requires`) |
 | Contraseña de usuarios mock | String vacío — `auth: { username: 'user', password: '' }` en tests |
 
@@ -161,69 +161,6 @@ package.json          ← @sap/cds dependency, cds config section
 **Área:** G3 — `db.entities()` deprecated en CAP 9
 **Síntoma:** Warning en consola: `DEPRECATED: srv.entities() — use cds.entities() instead`
 **Causa:** La API `db.entities('namespace')` fue deprecada en CAP 9
-**Fix aplicado:** (see build-log for details)
+**Fix aplicado:** Reemplazar `db.entities('namespace')` con `cds.entities('namespace')`.
 
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-21
-
-**Área:** [Fase 4 — Auth] cds.users ubicación incorrecta en package.json
-**Síntoma:** Usuario `admin` se autenticaba pero sin roles — `User 'admin' is lacking required roles: [TemplateAdmin,DocumentConsumer]`
-**Causa:** En CAP 9.x, el bloque `cds.users` en `package.json` a nivel raíz no es leído por el middleware de mocked auth. Los usuarios deben estar bajo `cds.requires.auth.users`.
-**Fix aplicado:** Mover `"users": {...}` dentro de `"cds": { "requires": { "auth": { "kind": "mocked", "users": {...} } } }`
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** Logging JSON en Python
-**Síntoma:** Logging JSON en Python
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** Validación max_records en Python engine
-**Síntoma:** Validación max_records en Python engine
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** Dockerfile python:3.12-slim
-**Síntoma:** Dockerfile python:3.12-slim
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** Batch INSERT — atomicidad real
-**Síntoma:** Batch INSERT — atomicidad real
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** Idempotencia en submitJob
-**Síntoma:** Idempotencia en submitJob
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** exportDecisions enriquecido
-**Síntoma:** exportDecisions enriquecido
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+> Patrón generalizable a cualquier proyecto CAP 9.

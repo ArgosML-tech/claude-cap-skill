@@ -394,56 +394,18 @@ Important: CAP does NOT expose `/health` by default. Without an explicit registr
 - Whether the restriction is static (role-based) or instance-based (data-dependent)
 - Whether the solution must also work correctly in draft mode (draft entities have separate access paths)
 
-## Gap descubierto — 2026-04-16
-
-**Área:** G1 — cds.users en nivel incorrecto (@sap/cds@9)
-**Síntoma:** `requester1` recibía 403 "lacking required roles" aunque tenía roles definidos en `package.json`
-**Causa:** Los usuarios mock se definieron en `cds.users` (nivel raíz), pero en `@sap/cds@9` deben estar en `cds.requires.auth.users`
-**Fix aplicado:** Mover el bloque de usuarios a `cds.requires.auth.users` en `package.json`
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-17
-
-**Área:** [Auth] Usuarios mocked deben estar en `cds.requires.auth.users`, no en `cds.auth.users`
-**Síntoma:** 403 Forbidden en todas las acciones con `@requires`, aunque los usuarios están definidos en `package.json` con los roles correctos. `cds.env.requires.auth.users` mostraba roles por defecto de CDS (alice=admin, bob=cds.ExtensionDeveloper) en lugar de los del proyecto.
-**Causa:** En CDS v9, los usuarios mocked deben configurarse bajo `cds.requires.auth.users` (dentro del bloque `requires`). La ubicación `cds.auth.users` (fuera de `requires`) es ignorada — CDS v9 usa los usuarios built-in por defecto.
-**Fix aplicado:** Mover la configuración completa de `auth` (con `kind`, `users`) de `cds.auth` a `cds.requires.auth` en `.cdsrc.json`.
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-18
-
-**Área:** G2 — Usuarios mocked deben estar en `cds.requires.auth.users`, no en `cds.users`
-**Síntoma:** `supervisor1` y `compliance1` reciben 403 al llamar acciones con `@requires: 'Supervisor'` / `@requires: 'Compliance'`
-**Causa:** En CAP 9, el auth mocked busca usuarios en `cds.requires.auth.users`. La key `cds.users` no es leída por el middleware de auth
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
 ## Gap descubierto — 2026-04-18
 
 **Área:** G4 — `validate-metadata.js` Pass 2 necesita `--credentials` cuando el servicio requiere auth
 **Síntoma:** Pass 2 falla aunque el servidor está corriendo — recibe 401
 **Causa:** El servicio tiene `@requires: 'authenticated-user'`, por lo que `$metadata` devuelve 401 sin credenciales
-**Fix aplicado:** (see build-log for details)
+**Fix aplicado:** Pasar `--credentials user:` al script cuando el servicio requiere autenticación.
 
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+## Gap descubierto — consolidado (2026-04-16 / 2026-04-17 / 2026-04-18 / 2026-04-23)
 
-## Gap descubierto — 2026-04-23
+**Área:** Auth — ubicación de usuarios mock en `@sap/cds@9`
+**Síntoma:** Usuarios autenticados reciben 403 aunque tienen roles definidos. Se manifestó con tres rutas incorrectas distintas: `cds.users` (raíz de package.json), `cds.auth.users`, y `cds.auth.users` en `.cdsrc.json`. En algún caso `cds.env.requires.auth.users` mostraba los usuarios built-in de CDS (alice, bob) en lugar de los del proyecto.
+**Causa:** En `@sap/cds@9`, el middleware de mocked auth solo lee `cds.requires.auth.users`. Las rutas `cds.users` y `cds.auth.users` son silenciosamente ignoradas — CDS carga sus usuarios built-in por defecto.
+**Fix aplicado:** Mover auth completo (`kind` + `users`) a `cds.requires.auth` en `package.json` o `.cdsrc.json` — ver sección "Strategy by environment → Local / testing" en esta reference.
 
-**Área:** Tests — mock users
-**Síntoma:** 403 Forbidden al llamar a servicios con roles declarados
-**Causa:** servicios con `@requires: 'admin'` necesitan usuarios mock configurados en `package.json` con el rol correspondiente
-**Fix aplicado:** añadir `cds.requires.auth.kind: "mocked"` + `users: { admin: { roles: ["admin"] }, reviewer: { roles: ["reviewer"] } }` en `package.json`
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
-
-## Gap descubierto — 2026-04-24
-
-**Área:** URL engine via env var
-**Síntoma:** URL engine via env var
-**Causa:** (see build-log for details)
-**Fix aplicado:** (see build-log for details)
-
-> Añadido automáticamente por close-learning-loop.js. Revisar y refinar manualmente si el patrón es generalizable.
+> Consolida 4 gaps duplicados (2026-04-16, 2026-04-17, 2026-04-18 G2, 2026-04-23). El patrón es idéntico con rutas incorrectas distintas. El gap "URL engine via env var" (2026-04-24) fue eliminado por carecer de detalle y no ser identificable como CAP.
