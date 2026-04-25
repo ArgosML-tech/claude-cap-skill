@@ -28,6 +28,7 @@ Toda la lógica CAP vive en `references/`. Antes de tomar cualquier decisión so
 | Guardrails de modelado CDS | `references/11-cds-modeling-guardrails.md` |
 | Visibilidad por rol y singletons | `references/12-role-driven-visibility-singletons.md` |
 | Plugins BTP (@cap-js) y servicios gestionados | `references/13-btp-plugins-services.md` |
+| Monorepo CAP accelerator (cap-acc, capx CLI) | `references/14-cap-acc.md` |
 
 No duplicar este conocimiento en el razonamiento. Leerlo, aplicarlo, y registrar cualquier desviación en `build-log.md`.
 
@@ -49,6 +50,10 @@ No duplicar este conocimiento en el razonamiento. Leerlo, aplicarlo, y registrar
 - `frontend` / `fiori` → leer `references/09-cap-frontend-fiori.md` + playbook FE
 - `external service` / `S/4` → leer `references/10-cap-external-services.md`
 - `testing` → leer `references/05-testing-deployment.md`
+
+**Monorepo / CAP accelerator (cap-acc)** cuando el repo tiene `package.json` con `"workspaces"` definido y al menos uno de `packages/cli`, `packages/lib`, `packages/starters` existe sin `db/schema.cds` ni `srv/*.cds` en la raíz:
+
+→ Leer `references/14-cap-acc.md` antes de actuar. No aplicar el playbook greenfield. No ejecutar `cds build` en la raíz. No tratar el monorepo como app CAP destino.
 
 **Runtime incierto:** si no puedes confirmar que el proyecto es CAP, leer `references/07-runtime-detection.md` antes de actuar. No afirmar CAP como hecho si no está confirmado.
 

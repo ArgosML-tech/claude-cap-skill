@@ -85,7 +85,7 @@ claude
 
 ### Uso C — Auditoría de cap-acc u otro acelerador CAP
 
-`cap-acc` es un monorepo/CLI/acelerador CAP, no una aplicación CAP estándar. En ese caso usar el skill como guía de auditoría y mejora, no como generador greenfield.
+`cap-acc` es un monorepo/CLI/acelerador CAP, no una aplicación CAP estándar. Existe ahora una reference específica (`references/14-cap-acc.md`) con estructura esperada, comandos de diagnóstico, qué evitar y primeras tareas recomendadas. En ese caso usar el skill como guía de auditoría y mejora, no como generador greenfield.
 
 Prompt de ejemplo:
 
@@ -115,6 +115,7 @@ references/                     ← base de conocimiento operativo CAP
   11-cds-modeling-guardrails.md ← guardrails de modelado CDS
   12-role-driven-visibility-singletons.md ← visibilidad por rol, singletons
   13-btp-plugins-services.md    ← plugins BTP (@cap-js) y servicios gestionados
+  14-cap-acc.md                 ← monorepo CAP accelerator (cap-acc, CLI capx)
 scripts/
   validate-metadata.js          ← validación estática y $metadata de la UI FE
   validate-fe.js                ← validación visual headless con Playwright
