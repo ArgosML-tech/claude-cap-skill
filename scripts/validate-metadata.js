@@ -291,12 +291,32 @@ if (port) {
 
     // Draft checks
     if (checkDraft) {
-      const draftMarkers = ['DraftRoot', 'DraftNode', 'IsActiveEntity', 'HasDraftEntity']
-      for (const marker of draftMarkers) {
+      // DraftRoot and IsActiveEntity are always present when @odata.draft.enabled is set.
+      // DraftNode only appears when the entity has composition children that inherit draft —
+      // a leaf entity with no compositions will not have DraftNode. Treat as warning, not failure.
+      const draftFails = ['DraftRoot', 'IsActiveEntity']
+      const draftWarns = [
+        {
+          marker: 'DraftNode',
+          hint: 'Expected only for entities with composition children — safe to ignore for leaf entities',
+        },
+        {
+          marker: 'HasDraftEntity',
+          hint: 'Absence does not invalidate draft, but review if navigation or edit flows are expected — may vary by CAP version and metadata exposure',
+        },
+      ]
+      for (const marker of draftFails) {
         if (metadataXml.includes(marker)) {
           pass(`Draft marker "${marker}" present in $metadata`)
         } else {
           fail(`Draft marker "${marker}" NOT found in $metadata — draft may not be enabled`)
+        }
+      }
+      for (const { marker, hint } of draftWarns) {
+        if (metadataXml.includes(marker)) {
+          pass(`Draft marker "${marker}" present in $metadata`)
+        } else {
+          warn(`Draft marker "${marker}" not found in $metadata`, hint)
         }
       }
     }

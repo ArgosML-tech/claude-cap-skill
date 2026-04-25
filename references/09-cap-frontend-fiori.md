@@ -79,7 +79,7 @@ When a FE app triggers draft operations, CAP fires specific events at each step.
 
 Example — validate before save:
 ```js
-this.before('SAVE', 'OrderRequests.drafts', req => {
+this.before('SAVE', 'OrderRequests', req => {
   if (!req.data.customerName) req.reject(400, 'Customer name is required')
 })
 ```

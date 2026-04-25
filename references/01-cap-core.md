@@ -108,7 +108,7 @@ package.json          ← @sap/cds dependency, cds config section
 |---|---|
 | Relación padre-hijo con ciclo de vida compartido | `Composition` |
 | Relación de referencia a master data | `Association` |
-| Entidad de catálogo con valores fijos | `CodeList` + `@cds.autoexpose @readonly` |
+| Entidad de catálogo con valores fijos | `CodeList` + `@cds.autoexpose @readonly` — **caveat**: `sap.common.CodeList` define `key code: String(11)`. Para códigos más largos (e.g. `PENDING_UNIT_APPROVAL`) usar un aspecto propio `{ key code: String(40); name: String(150); }` en lugar de extender `CodeList`. |
 | Entidades editadas incrementalmente antes de confirmar | `@odata.draft.enabled` |
 | Tipo de campo de texto corto | `String(100)` salvo que la spec indique longitud |
 | Tipo de campo de importe | `Decimal(15,2)` |
@@ -150,8 +150,8 @@ package.json          ← @sap/cds dependency, cds config section
 | Si la spec calla sobre... | Decisión por defecto |
 |---|---|
 | Tipo de app FE | List Report + Object Page |
-| CDN de UI5 | `https://ui5.sap.com/1.120.x/` |
-| Shell wrapper | `sap.m.Shell` como wrapper del AppComponent |
+| CDN de UI5 | `https://sapui5.hana.ondemand.com/resources/sap-ui-core.js` — **NO usar `ui5.sap.com` ni versiones con `.x`**: producen CORB en Chrome/Edge cuando el MIME type es `text/html`. Ver `references/09-cap-frontend-fiori.md` sección "UI5 bootstrap: correct CDN host". |
+| Shell wrapper | **FE 1.120+**: `ComponentSupport` directo — NO envolver con `sap.m.Shell`. En FE 1.120+, `sap.fe.core.AppComponent` gestiona su propio router; `sap.m.Shell` es legado y puede romper la navegación en standalone. Solo usar `sap.m.Shell` si el proyecto usa SAPUI5 freestyle sin `sap.fe.core.AppComponent`. Ver `references/09-cap-frontend-fiori.md` sección "Standalone FE app — patrón correcto". |
 | Anotaciones de acción | `@Core.OperationAvailable` con virtual Boolean field |
 | Title del Object Page | Campo más descriptivo para el humano (no el UUID) |
 | Una app por rol vs compartida | Una app por cluster de rol si los datos son distintos |
